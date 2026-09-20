@@ -1,0 +1,8 @@
+node_modules/
+.pnpm-store/
+.wxt/
+.output/
+dist/
+.DS_Store
+web-ext.config.ts
+test-results/

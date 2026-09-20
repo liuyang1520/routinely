@@ -1,0 +1,7 @@
+packages:
+  - .
+
+# Seven days, in minutes. Applies to direct and transitive dependencies.
+minimumReleaseAge: 10080
+onlyBuiltDependencies:
+  - esbuild
