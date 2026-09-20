@@ -4,6 +4,7 @@ import { routineSchema, type Routine, type Schedule } from '../lib/model';
 import { weekDays } from '../lib/schedule';
 import { Modal } from './ui/dialog';
 import { Button } from './ui/button';
+import { CustomSelect } from './ui/select';
 
 export type Template = {
   title: string;
@@ -106,14 +107,12 @@ export function RoutineForm({
           </label>
           <label className="category-select">
             Category
-            <select
+            <CustomSelect
+              aria-label="Category"
               value={category}
-              onChange={(e) => setCategory(e.target.value as Routine['category'])}
-            >
-              {['Personal', 'Learning', 'Wellbeing', 'Work'].map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
+              onChange={(c) => setCategory(c as Routine['category'])}
+              options={['Personal', 'Learning', 'Wellbeing', 'Work']}
+            />
           </label>
         </div>
         <div className="form-section">
@@ -123,17 +122,19 @@ export function RoutineForm({
           <div className="form-row">
             <label>
               Repeat
-              <select
+              <CustomSelect
+                aria-label="Repeat"
                 value={schedule.frequency}
-                onChange={(e) =>
-                  setSchedule({ ...schedule, frequency: e.target.value as Schedule['frequency'] })
+                onChange={(f) =>
+                  setSchedule({ ...schedule, frequency: f as Schedule['frequency'] })
                 }
-              >
-                <option value="daily">Every day</option>
-                <option value="weekly">Selected weekdays</option>
-                <option value="monthly">Every month</option>
-                <option value="interval">Every few days</option>
-              </select>
+                options={[
+                  { value: 'daily', label: 'Every day' },
+                  { value: 'weekly', label: 'Selected weekdays' },
+                  { value: 'monthly', label: 'Every month' },
+                  { value: 'interval', label: 'Every few days' },
+                ]}
+              />
             </label>
             <label>
               At what time?

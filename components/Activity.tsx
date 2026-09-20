@@ -12,6 +12,7 @@ import type { Action, State } from '../lib/model';
 import { addDays, dayKey, startOfDay, timeLabel } from '../lib/schedule';
 import { download, historyCsv } from '../lib/export';
 import { Button } from './ui/button';
+import { CustomSelect } from './ui/select';
 
 export function Activity({
   state,
@@ -214,20 +215,21 @@ export function Activity({
                 Clear date
               </Button>
             )}
-            <select
+            <CustomSelect
               aria-label="Filter history by status"
               value={filter}
-              onChange={(e) => {
-                setFilter(e.target.value);
+              onChange={(val) => {
+                setFilter(val);
                 setLimit(30);
               }}
-            >
-              <option value="all">All results</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="skipped">Skipped</option>
-              <option value="missed">Missed</option>
-            </select>
+              options={[
+                { value: 'all', label: 'All results' },
+                { value: 'completed', label: 'Completed' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'skipped', label: 'Skipped' },
+                { value: 'missed', label: 'Missed' },
+              ]}
+            />
           </div>
         </div>
         {history.length === 0 ? (

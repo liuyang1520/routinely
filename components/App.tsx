@@ -11,8 +11,8 @@ import {
   CircleHelp,
   Clock3,
   ExternalLink,
-  Leaf,
   ListTodo,
+  Moon,
   Pause,
   Pencil,
   Play,
@@ -39,6 +39,7 @@ import { download } from '../lib/export';
 import { Brand } from './Brand';
 import { Button } from './ui/button';
 import { Confirm, Modal } from './ui/dialog';
+import { CustomSelect } from './ui/select';
 import { RoutineForm, type Template } from './RoutineForm';
 import { CategoryIcon, OccurrenceCard } from './OccurrenceCard';
 import { Activity } from './Activity';
@@ -83,6 +84,18 @@ export function App() {
   const [help, setHelp] = useState(false);
   const [note, setNote] = useState<string>();
   const [saved, setSaved] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('routinely-theme') as 'dark' | 'light') || 'dark';
+    }
+    return 'dark';
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    document.documentElement.classList.toggle('light', theme === 'light');
+    localStorage.setItem('routinely-theme', theme);
+  }, [theme]);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (
@@ -186,22 +199,6 @@ export function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-thought">
-            <span>
-              <Leaf size={19} />
-            </span>
-            <h3>A little, often.</h3>
-            <p>
-              You don’t have to do it all.
-              <br />
-              Just make room for what matters.
-            </p>
-            <div className="thought-dots">
-              <i />
-              <i />
-              <i />
-            </div>
-          </div>
           <nav aria-label="Tools">
             <button
               aria-label="Export data"
@@ -228,10 +225,6 @@ export function App() {
               <span>A little help</span>
             </button>
           </nav>
-          <div className="local-status">
-            <i />
-            On this browser. Just for you.
-          </div>
         </div>
       </aside>
       <div className="main-shell">
@@ -252,10 +245,14 @@ export function App() {
             </strong>
           </div>
           <div className="topbar-right">
-            <span>
-              <i />
-              Stored on this browser
-            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            >
+              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -264,9 +261,6 @@ export function App() {
             >
               <Bell />
             </Button>
-            <span className="avatar">
-              <Leaf size={17} />
-            </span>
           </div>
         </header>
         <main className="main-content">
@@ -415,15 +409,8 @@ export function App() {
                       </div>
                     ) : (
                       <div className="empty-routines">
-                        <div className="empty-illustration">
-                          <span className="illustration-orbit" />
-                          <span className="illustration-sheet">
-                            <CheckCheck size={36} />
-                          </span>
-                          <span className="illustration-leaf">
-                            <Leaf size={20} />
-                          </span>
-                          <i />
+                        <div className="empty-badge">
+                          <CheckCheck size={32} />
                         </div>
                         <h2>
                           {state.routines.length === 0
@@ -553,7 +540,7 @@ export function App() {
                             });
                         }}
                       />
-                      <div>
+                      <div className="scratchpad-footer">
                         <span>
                           {saved ? (
                             <>
@@ -561,10 +548,9 @@ export function App() {
                               Saved
                             </>
                           ) : (
-                            'Just for you. Saved when you leave.'
+                            'Auto-save active'
                           )}
                         </span>
-                        <span>✳</span>
                       </div>
                     </section>
                     <section className="next-up">
@@ -597,15 +583,12 @@ export function App() {
                         onChange={(e) => setSearch(e.target.value)}
                       />
                     </label>
-                    <select
+                    <CustomSelect
                       aria-label="Filter routines by category"
                       value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                    >
-                      {['All routines', 'Personal', 'Learning', 'Wellbeing', 'Work'].map((c) => (
-                        <option key={c}>{c}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setCategory(val)}
+                      options={['All routines', 'Personal', 'Learning', 'Wellbeing', 'Work']}
+                    />
                     <span className="muted">
                       {active.length} active · {state.routines.length - active.length} paused
                     </span>
@@ -689,11 +672,8 @@ export function App() {
             </>
           )}
           <footer className="page-footer">
-            <span>
-              <Leaf size={13} />
-              Made for a little more intention.
-            </span>
-            <span>Less keeping track. More showing up.</span>
+            <span className="footer-brand">ROUTINELY</span>
+            <span className="footer-system">GLASSMORPHISM SYSTEM · EMERALD</span>
           </footer>
         </main>
       </div>

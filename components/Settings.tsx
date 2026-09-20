@@ -15,6 +15,7 @@ import { download, historyCsv, parseBackup } from '../lib/export';
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { Confirm } from './ui/dialog';
+import { CustomSelect } from './ui/select';
 
 export function Settings({
   state,
@@ -85,24 +86,26 @@ export function Settings({
               <label htmlFor="position">A place for your panel</label>
               <p>Choose the corner that feels least in the way.</p>
             </div>
-            <select
+            <CustomSelect
               id="position"
+              aria-label="A place for your panel"
               value={state.settings.position}
-              onChange={(e) =>
+              onChange={(val) =>
                 void act({
                   type: 'settings',
                   value: {
                     ...state.settings,
-                    position: e.target.value as State['settings']['position'],
+                    position: val as State['settings']['position'],
                   },
                 })
               }
-            >
-              <option value="top-right">Top right</option>
-              <option value="bottom-right">Bottom right</option>
-              <option value="top-left">Top left</option>
-              <option value="bottom-left">Bottom left</option>
-            </select>
+              options={[
+                { value: 'top-right', label: 'Top right' },
+                { value: 'bottom-right', label: 'Bottom right' },
+                { value: 'top-left', label: 'Top left' },
+                { value: 'bottom-left', label: 'Bottom left' },
+              ]}
+            />
           </div>
           <div className="setting-row">
             <div>
@@ -191,16 +194,6 @@ export function Settings({
             </p>
           )}
         </section>
-        <aside className="privacy-note">
-          <ShieldCheck size={24} />
-          <div>
-            <h3>A little space that’s just yours.</h3>
-            <p>
-              No account. No tracking. No server. Your routines live in this browser’s local
-              storage. Export a backup before removing the extension or switching devices.
-            </p>
-          </div>
-        </aside>
       </div>
       <Confirm
         open={!!backup}

@@ -2,12 +2,15 @@
    tokens keep host-page root font sizes from shrinking the shadow-root UI. */
 :root,
 :host {
-  --routinely-text-caption: 13px;
-  --routinely-text-meta: 14px;
-  --routinely-text-small: 15px;
-  --routinely-text-body: 16px;
+  --font-sans:
+    'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --routinely-text-label: 10px;
+  --routinely-text-caption: 11px;
+  --routinely-text-meta: 13px;
+  --routinely-text-small: 14px;
+  --routinely-text-body: 15px;
   --routinely-text-section: 18px;
-  --routinely-text-heading: 20px;
-  --routinely-text-title: 22px;
-  --routinely-text-dialog: 24px;
+  --routinely-text-heading: 22px;
+  --routinely-text-title: 28px;
+  --routinely-text-dialog: 28px;
 }

@@ -57,7 +57,6 @@ export function Popup() {
           Open my routines
           <ArrowUpRight />
         </Button>
-        <span>Saved in this browser. Just for you.</span>
       </footer>
     </main>
   );

@@ -56,14 +56,6 @@ export function Later({ state, act }: { state: State; act: (action: Action) => P
           Save a page
         </Button>
       </div>
-      <div className="later-tip">
-        <CalendarClock size={21} />
-        <p>
-          On any webpage, click the Routinely toolbar icon and choose{' '}
-          <strong>1 hour, 3 hours, or 1 day</strong>. Keep the tab open or close it — we’ll find it
-          either way.
-        </p>
-      </div>
       {error && (
         <p role="alert" className="form-error">
           {error}
