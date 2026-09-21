@@ -37,11 +37,13 @@ export function OccurrenceCard({
   act,
   compact = false,
   readOnly = false,
+  minimal = false,
 }: {
   item: Occurrence;
   act: (action: Action) => Promise<boolean>;
   compact?: boolean;
   readOnly?: boolean;
+  minimal?: boolean;
 }) {
   const [expanded, setExpanded] = useState(compact);
   const [note, setNote] = useState<string>();
@@ -124,17 +126,19 @@ export function OccurrenceCard({
             </PageLink>
           </Button>
         )}
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label={`${expanded ? 'Hide' : 'Show'} details for ${item.title}`}
-          aria-expanded={expanded}
-          onClick={() => setExpanded(!expanded)}
-        >
-          <ChevronDown className={expanded ? 'rotate-180' : ''} />
-        </Button>
+        {!minimal && (
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={`${expanded ? 'Hide' : 'Show'} details for ${item.title}`}
+            aria-expanded={expanded}
+            onClick={() => setExpanded(!expanded)}
+          >
+            <ChevronDown className={expanded ? 'rotate-180' : ''} />
+          </Button>
+        )}
       </div>
-      {expanded && (
+      {!minimal && expanded && (
         <div className="occurrence-details">
           {item.tasks.length > 0 && (
             <div className="checklist">

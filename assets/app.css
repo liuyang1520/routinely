@@ -1929,10 +1929,13 @@ em {
   position: absolute;
   left: 14px;
   color: var(--muted-foreground);
+  pointer-events: none;
+  z-index: 1;
 }
 
-.search-input input {
-  padding-left: 40px;
+.search-input input,
+.search-input input:not([type='checkbox']):not([type='file']) {
+  padding-left: 42px !important;
   height: 40px;
 }
 
@@ -2615,7 +2618,7 @@ html.popup-page,
   max-height: 590px;
   overflow-y: auto;
   background: var(--background);
-  padding: 0;
+  padding: 0 0 20px 0;
 }
 
 .popup > header {
@@ -2632,33 +2635,100 @@ html.popup-page,
   gap: 6px;
 }
 
-.popup-heading {
-  padding: 20px 20px 14px;
+.popup-nav {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  margin: 16px 14px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(var(--blur-glass));
 }
 
-.popup-heading > span {
+[data-theme='light'] .popup-nav {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.popup-nav button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: calc(var(--radius-sm) - 4px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.popup-nav button:hover {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.popup-nav button.active {
+  background: var(--emerald-muted);
+  color: var(--primary);
+  border-color: rgba(52, 211, 153, 0.25);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme='light'] .popup-nav button.active {
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.popup-nav .tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+}
+
+.popup-nav button.active .tab-badge {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.popup-heading {
+  padding: 2px 18px 10px;
+}
+
+.popup-heading-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.popup-heading-content > span {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   font-weight: 700;
   color: var(--primary);
 }
 
-.popup-heading h1 {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.05em;
-  margin-top: 8px;
-  color: var(--foreground);
-}
-
-.popup-heading p {
+.popup-heading-content > p {
   color: var(--muted-foreground);
-  font-size: var(--routinely-text-caption);
-  margin-top: 4px;
+  font-size: 11px;
+  margin: 0;
 }
 
 .popup-list {
@@ -2666,6 +2736,46 @@ html.popup-page,
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.popup .managed-routine {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.popup .managed-routine-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.popup .managed-routine-copy h3 {
+  font-size: var(--routinely-text-small);
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.popup .managed-routine-copy p {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.popup .routine-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .popup .occurrence-main {
@@ -2776,10 +2886,190 @@ html.popup-page,
   height: 34px;
 }
 
+.quick-delay-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.quick-delay-actions > .delay-hint,
 .quick-delay > .delay-hint {
   font-size: 11px;
-  margin-top: 10px;
+  margin-top: 0;
   color: var(--muted-foreground);
+}
+
+.make-routine-btn {
+  font-size: 11px !important;
+  height: 26px !important;
+  padding: 0 8px !important;
+  color: var(--primary) !important;
+  gap: 4px !important;
+}
+
+.make-routine-btn:hover {
+  background: var(--emerald-muted) !important;
+}
+
+.custom-delay-picker {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(var(--blur-glass));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fade-in 200ms ease-out;
+}
+
+[data-theme='light'] .custom-delay-picker {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.custom-delay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.custom-delay-header span.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.custom-delay-header span.hint {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.custom-delay-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.custom-delay-shortcuts button {
+  font-size: 11px;
+  padding: 4px 8px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted-foreground-bright);
+  cursor: pointer;
+  transition: all 150ms ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.custom-delay-shortcuts button:hover {
+  background: var(--card-hover);
+  color: var(--foreground);
+  border-color: var(--card-border-hover);
+}
+
+.custom-delay-shortcuts button.active {
+  background: var(--emerald-muted);
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+[data-theme='light'] .custom-delay-shortcuts button {
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--muted-foreground);
+}
+
+[data-theme='light'] .custom-delay-shortcuts button:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--foreground);
+}
+
+.custom-delay-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-datetime-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.custom-datetime-input,
+input[type='datetime-local'].custom-datetime-input,
+.custom-delay input {
+  width: 100%;
+  height: 38px;
+  padding: 8px 12px;
+  font-size: var(--routinely-text-caption);
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--foreground);
+  outline: none;
+  transition: all 200ms ease;
+  color-scheme: dark;
+}
+
+[data-theme='light'] .custom-datetime-input,
+[data-theme='light'] input[type='datetime-local'].custom-datetime-input,
+[data-theme='light'] .custom-delay input {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--foreground);
+  color-scheme: light;
+}
+
+.custom-datetime-input:focus,
+input[type='datetime-local'].custom-datetime-input:focus,
+.custom-delay input:focus {
+  border-color: var(--emerald);
+  box-shadow:
+    0 0 0 1px var(--emerald),
+    0 0 15px var(--emerald-glow);
+}
+
+.custom-datetime-input::-webkit-calendar-picker-indicator,
+.custom-delay input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0.75;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.custom-datetime-input::-webkit-calendar-picker-indicator:hover,
+.custom-delay input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.custom-delay-submit {
+  height: 38px;
+  padding: 0 14px;
+  flex-shrink: 0;
+}
+
+.custom-delay-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--primary);
+  padding: 2px 2px;
 }
 
 .custom-delay {
@@ -2796,14 +3086,9 @@ html.popup-page,
   font-size: var(--routinely-text-caption);
 }
 
-.custom-delay input {
-  font-size: var(--routinely-text-caption);
-  padding: 6px 10px;
-}
-
 .custom-delay .button {
   font-size: var(--routinely-text-caption);
-  height: 32px;
+  height: 38px;
 }
 
 .delay-saved {

@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Check, Clock3, RotateCcw } from 'lucide-react';
+import { Check, Clock3, Plus, RotateCcw } from 'lucide-react';
 import { getCurrentTab } from '../lib/client';
 import type { Action } from '../lib/model';
 import { timeLabel } from '../lib/schedule';
 import { Button } from './ui/button';
 import { DelayChoices } from './DelayChoices';
 
-export function QuickDelay({ act }: { act: (action: Action) => Promise<boolean> }) {
+export function QuickDelay({
+  act,
+  onMakeRoutine,
+}: {
+  act: (action: Action) => Promise<boolean>;
+  onMakeRoutine?: (template: { title: string; url: string }) => void;
+}) {
   const [tab, setTab] = useState<{ title: string; url: string }>();
   const [loaded, setLoaded] = useState(false);
   const [scheduled, setScheduled] = useState<{ id: string; at: number }>();
@@ -81,7 +87,21 @@ export function QuickDelay({ act }: { act: (action: Action) => Promise<boolean> 
               return ok;
             }}
           />
-          <p className="delay-hint">Switches to this tab, or reopens it if you close it.</p>
+          <div className="quick-delay-actions">
+            <p className="delay-hint">Switches to this tab, or reopens it if you close it.</p>
+            {onMakeRoutine && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="make-routine-btn"
+                onClick={() => onMakeRoutine({ title: tab.title, url: tab.url })}
+              >
+                <Plus size={13} />
+                Make it a routine
+              </Button>
+            )}
+          </div>
         </>
       )}
     </section>

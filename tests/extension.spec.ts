@@ -110,6 +110,7 @@ test('create, edit, complete, export, and restore a routine in the real extensio
   ).toBeVisible();
   await page.getByRole('textbox', { name: 'Scratchpad' }).fill('A thought to keep.');
   await page.getByRole('button', { name: 'My routines', exact: true }).click();
+  await page.screenshot({ path: 'test-results/routines-search.png', animations: 'disabled' });
   await page.getByRole('button', { name: 'Edit Read something good' }).click();
   await page.getByRole('combobox', { name: 'Repeat', exact: true }).selectOption('weekly');
   await page.getByRole('button', { name: 'Weekdays', exact: true }).click();
@@ -142,7 +143,6 @@ test('create, edit, complete, export, and restore a routine in the real extensio
   const popup = await context.newPage();
   await popup.setViewportSize({ width: 420, height: 600 });
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-  await expect(popup.getByRole('heading', { name: 'A little room for today.' })).toBeVisible();
   await expect(popup.getByRole('heading', { name: 'Read something good' })).toBeVisible();
   await popup.screenshot({ path: 'test-results/popup.png', animations: 'disabled' });
   const opened = context.waitForEvent('page');
@@ -174,12 +174,12 @@ test('the actual toolbar popup opens at a readable width', async () => {
       return {
         height: popup.innerHeight,
         contentWidth: popup.document.documentElement.scrollWidth,
-        title: popup.document.querySelector('h1')?.textContent,
+        title: popup.document.querySelector('.popup-heading span')?.textContent,
       };
     });
     expect(dimensions.height).toBeLessThanOrEqual(600);
     expect(dimensions.contentWidth).toBe(420);
-    expect(dimensions.title).toBe('A little room for today.');
+    expect(dimensions.title).toBeTruthy();
   } finally {
     await page.evaluate(() => {
       (globalThis as any).chrome.extension.getViews({ type: 'popup' })[0]?.close();
@@ -319,6 +319,23 @@ test('the popup saves the current webpage and the later queue supports reschedul
   await popup.setViewportSize({ width: 420, height: 600 });
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
   await expect(popup.getByText('A normal webpage', { exact: true })).toBeVisible();
+  await expect(popup.getByRole('button', { name: 'Open my routines' })).toHaveCount(0);
+
+  // Test custom date picker styling and interaction
+  await popup.getByRole('button', { name: 'Custom', exact: true }).click();
+  await expect(popup.getByText('Custom schedule')).toBeVisible();
+  await expect(popup.getByRole('button', { name: 'Tomorrow 9am' })).toBeVisible();
+  await popup.screenshot({ path: 'test-results/custom-date-picker.png', animations: 'disabled' });
+  await popup.getByRole('button', { name: 'Custom', exact: true }).click();
+
+  // Test popover daily/weekly tabs
+  await popup.getByRole('tab', { name: 'Daily' }).click();
+  await expect(popup.getByText('Daily rhythms')).toBeVisible();
+  await popup.getByRole('tab', { name: 'Weekly' }).click();
+  await expect(popup.getByText('Weekly rhythms')).toBeVisible();
+  await popup.getByRole('tab', { name: 'Today' }).click();
+  await expect(popup.getByText('0 of 0 completed')).toBeVisible();
+
   await popup.screenshot({ path: 'test-results/quick-delay.png', animations: 'disabled' });
   const before = Date.now();
   await popup.getByRole('button', { name: '1 hour', exact: true }).click();
