@@ -10,6 +10,7 @@ import {
   queueNavigationNotice,
 } from '../lib/navigation-delivery';
 import type { NavigationReason } from '../lib/navigation-notice';
+import { normalizedPageUrl } from '../lib/urls';
 
 export default defineBackground(() => {
   // All writes go through this queue, including alarms and messages from different tabs.
@@ -40,7 +41,7 @@ export default defineBackground(() => {
   async function activeTab() {
     const win = await browser.windows.getLastFocused();
     if (!win.focused) return;
-    return (await browser.tabs.query({ active: true, windowId: win.id }))[0]?.id;
+    return (await browser.tabs.query({ active: true, windowId: win.id }))[0];
   }
   async function sendPanel(tabId: number, visible: boolean, state: State) {
     try {
@@ -50,15 +51,27 @@ export default defineBackground(() => {
     }
   }
   async function present(state: State) {
-    const tabId = await activeTab();
+    const tab = await activeTab();
+    const tabId = tab?.id;
     if (lastVisibleTab !== undefined && lastVisibleTab !== tabId)
       await sendPanel(lastVisibleTab, false, state);
     lastVisibleTab = tabId;
     const due = dueItems(state);
     await browser.action.setBadgeText({ text: due.length ? String(due.length) : '' });
     await browser.action.setBadgeBackgroundColor({ color: '#42694e' });
-    if (tabId !== undefined)
-      await sendPanel(tabId, state.settings.reminders && due.length > 0, state);
+    if (tab && tabId !== undefined) {
+      const address = tab.pendingUrl || tab.url;
+      const items = due.filter((item) => {
+        if (tab.incognito) return false;
+        if (!item.url) return true;
+        return !!address && normalizedPageUrl(item.url) === normalizedPageUrl(address);
+      });
+      // The panel paginates its state, so scope the contents as well as visibility.
+      await sendPanel(tabId, state.settings.reminders && items.length > 0, {
+        ...state,
+        occurrences: items,
+      });
+    }
   }
   async function save(state: State) {
     await browser.storage.local.set({ [STORAGE_KEY]: state });
@@ -100,16 +113,23 @@ export default defineBackground(() => {
         };
         await browser.storage.local.set({ [STORAGE_KEY]: state });
         // One focus change per batch avoids cycling through several due tabs.
-        for (const item of items) {
-          const result = await openOrFocusTab(item.url, false);
-          if (result.reused) {
-            await explainNavigation(result, {
-              kind: 'routine',
-              title: item.title,
-              scheduledAt: item.scheduledAt,
-            });
-            break;
-          }
+        const item = items[0]!;
+        try {
+          const result = await openOrFocusTab(item.url);
+          await explainNavigation(result, {
+            kind: 'routine',
+            title: item.title,
+            scheduledAt: item.scheduledAt,
+          });
+        } catch {
+          // Let the next tick retry if the destination could not be opened.
+          state = {
+            ...state,
+            occurrences: state.occurrences.map((o) =>
+              ids.has(o.id) ? { ...o, tabHandledAt: undefined } : o,
+            ),
+          };
+          await browser.storage.local.set({ [STORAGE_KEY]: state });
         }
       }
     }
@@ -189,6 +209,10 @@ export default defineBackground(() => {
   });
   browser.tabs.onActivated.addListener(() => {
     void serial(tick);
+  });
+  browser.tabs.onUpdated.addListener((_tabId, change) => {
+    // Includes same-document navigation, where the content script stays mounted.
+    if (change.url) void serial(async () => present(reconcile(await load())));
   });
   browser.tabs.onRemoved.addListener((tabId) => {
     void serial(() => forgetNavigationNotice(tabId));

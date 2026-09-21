@@ -236,7 +236,10 @@ test('theme toggle in popover window synchronizes with the detailed page and vic
   expect(errors).toEqual([]);
 });
 
-test('alarms show isolated reminders on the active tab; snooze, notes, and completion persist', async () => {
+test('alarms open the target page and keep its reminder there; snooze, notes, and completion persist', async () => {
+  await seed(emptyState());
+  const second = await context.newPage();
+  await second.goto(`${url}/other`);
   const now = Date.now();
   const date = new Date(now);
   date.setSeconds(0, 0);
@@ -258,9 +261,10 @@ test('alarms show isolated reminders on the active tab; snooze, notes, and compl
       },
     ],
   });
-  const first = await context.newPage();
-  await first.goto(url);
-  await first.bringToFront();
+  await expect
+    .poll(() => context.pages().some((page) => page.url() === `${url}/article`))
+    .toBe(true);
+  const first = context.pages().find((page) => page.url() === `${url}/article`)!;
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
   await expect(first.getByRole('heading', { name: 'Alarm test routine' })).toBeVisible();
   await first.getByLabel('Read a little').check();
@@ -272,27 +276,27 @@ test('alarms show isolated reminders on the active tab; snooze, notes, and compl
   expect(state.occurrences[0]?.snoozedUntil).toBeGreaterThan(now);
   expect(state.occurrences[0]?.notes).toBe('A note from the floating panel.');
   state.occurrences[0]!.snoozedUntil = Date.now() - 1;
+  await second.bringToFront();
   await seed(state);
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
-  const second = await context.newPage();
-  await second.goto(`${url}/other`);
   await second.bringToFront();
-  await expect(second.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
-  await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
-  await expect(second.getByLabel('Read a little')).toBeChecked();
-  expect(await second.evaluate(() => getComputedStyle(document.body).fontSize)).toBe('18px');
-  const newTab = context.waitForEvent('page');
-  await second.getByRole('link', { name: 'Open Alarm test routine' }).click();
-  const article = await newTab;
-  await article.waitForURL(`${url}/article`);
-  expect(article.url()).toBe(`${url}/article`);
-  expect((await read()).occurrences[0]?.status).toBe('pending');
-  await article.close();
-  await second.bringToFront();
-  await expect(second.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
-  await second.screenshot({ path: 'test-results/floating-reminder.png', animations: 'disabled' });
-  await second.getByRole('button', { name: 'Mark done', exact: true }).click();
   await expect(second.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
+  await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
+  await first.bringToFront();
+  await expect(first.getByLabel('Read a little')).toBeChecked();
+  expect(await first.evaluate(() => getComputedStyle(document.body).fontSize)).toBe('18px');
+  // Same-document navigation must also retire the panel without a page reload.
+  await first.evaluate(() => history.pushState({}, '', '/different-article'));
+  await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
+  await first.evaluate(() => history.pushState({}, '', '/article'));
+  await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
+  const countBefore = context.pages().length;
+  await first.getByRole('link', { name: 'Open Alarm test routine' }).click();
+  expect(context.pages()).toHaveLength(countBefore);
+  expect((await read()).occurrences[0]?.status).toBe('pending');
+  await first.screenshot({ path: 'test-results/floating-reminder.png', animations: 'disabled' });
+  await first.getByRole('button', { name: 'Mark done', exact: true }).click();
+  await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
   state = await read();
   expect(state.occurrences[0]).toMatchObject({
     status: 'completed',
@@ -308,6 +312,59 @@ test('alarms show isolated reminders on the active tab; snooze, notes, and compl
   await page.close();
   await first.close();
   await second.close();
+});
+
+test('panels only paginate reminders for their exact URL when automatic switching is disabled', async () => {
+  await seed(emptyState());
+  const first = await context.newPage();
+  const firstUrl = `${url}/scoped?view=1#section`;
+  const secondUrl = `${url}/scoped?view=2#section`;
+  await first.goto(firstUrl);
+  const now = Date.now();
+  const state = emptyState(now);
+  state.settings.focusExistingTabs = false;
+  state.routines = [firstUrl, secondUrl, firstUrl].map((address, index) => ({
+    id: `scoped-${index}`,
+    title: `Scoped routine ${index}`,
+    url: address,
+    category: 'Learning',
+    notes: '',
+    tasks: [],
+    schedule: { frequency: 'daily', time: '23:59', days: [1], monthDay: 1, interval: 1 },
+    enabled: true,
+    startAt: now,
+    createdAt: now,
+  }));
+  state.occurrences = state.routines.map((routine) => ({
+    id: `due-${routine.id}`,
+    routineId: routine.id,
+    title: routine.title,
+    url: routine.url,
+    category: routine.category,
+    scheduledAt: now,
+    status: 'pending',
+    notes: '',
+    tasks: [],
+  }));
+  await seed(state);
+  await first.bringToFront();
+  const panel = first.getByRole('region', { name: 'Routinely reminder' });
+  await expect(panel.getByRole('heading', { name: 'Scoped routine 0' })).toBeVisible();
+  await expect(panel.getByRole('button', { name: /^Show reminder/ })).toHaveCount(2);
+  await panel.getByRole('button', { name: 'Show reminder 2' }).click();
+  await expect(panel.getByRole('heading', { name: 'Scoped routine 2' })).toBeVisible();
+  expect(context.pages().some((page) => page.url() === secondUrl)).toBe(false);
+  expect((await read()).occurrences.every((item) => item.tabHandledAt === undefined)).toBe(true);
+  expect(
+    await worker.evaluate(async () => (globalThis as any).chrome.action.getBadgeText({})),
+  ).toBe('3');
+  await first.goto(secondUrl);
+  await expect(panel.getByRole('heading', { name: 'Scoped routine 1' })).toBeVisible();
+  await expect(panel.getByRole('button', { name: /^Show reminder/ })).toHaveCount(0);
+  await first.evaluate(() => history.pushState({}, '', '#another-section'));
+  await expect(panel).toHaveCount(0);
+  expect(errors).toEqual([]);
+  await first.close();
 });
 
 test('the popup saves the current webpage and the later queue supports rescheduling and cancel', async () => {
@@ -566,10 +623,19 @@ test('a navigation explanation waits for a newly opened page to finish loading',
   }
 });
 
-test('a due routine switches to its existing tab only once', async () => {
+test('a due routine switches to its existing tab and window only once', async () => {
   await seed(emptyState());
-  const target = await context.newPage();
-  await target.goto(`${url}/routine-existing`);
+  const other = await context.newPage();
+  await other.goto(`${url}/unrelated-window`);
+  const created = await worker.evaluate(
+    async (address) => (globalThis as any).chrome.windows.create({ url: address, focused: false }),
+    `${url}/routine-existing`,
+  );
+  await expect
+    .poll(() => context.pages().some((page) => page.url() === `${url}/routine-existing`))
+    .toBe(true);
+  const target = context.pages().find((page) => page.url() === `${url}/routine-existing`)!;
+  await other.bringToFront();
   const now = Date.now();
   const date = new Date(now);
   date.setSeconds(0, 0);
@@ -599,6 +665,11 @@ test('a due routine switches to its existing tab only once', async () => {
           .url,
     ),
   ).toBe(`${url}/routine-existing`);
+  expect(
+    await worker.evaluate(
+      async () => (await (globalThis as any).chrome.windows.getLastFocused()).id,
+    ),
+  ).toBe(created.id);
   const toast = target.getByRole('complementary', { name: 'Why Routinely opened this page' });
   const reminder = target.getByRole('region', { name: 'Routinely reminder' });
   await expect(toast).toContainText('Switched to this tab for “Focus an existing tab”.');
@@ -607,8 +678,22 @@ test('a due routine switches to its existing tab only once', async () => {
   const reminderBox = (await reminder.boundingBox())!;
   expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(reminderBox.y);
   await target.screenshot({ path: 'test-results/routine-with-toast.png', animations: 'disabled' });
+  await expect(other.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
   const page = await dashboard();
+  // Headless Chromium on macOS reports both windows focused. Exercise leaving
+  // the destination via another tab in its window after verifying cross-window reuse.
+  await worker.evaluate(
+    async ({ windowId, address }) => {
+      const tab = (await (globalThis as any).chrome.tabs.query({})).find(
+        (tab: any) => tab.url === address,
+      );
+      await (globalThis as any).chrome.tabs.move(tab.id, { windowId, index: -1 });
+      await (globalThis as any).chrome.tabs.update(tab.id, { active: true });
+    },
+    { windowId: created.id, address: page.url() },
+  );
   await page.bringToFront();
+  await expect(reminder).toHaveCount(0);
   await expect(
     page.getByRole('heading', { name: 'Good habits. A little at a time.' }),
   ).toBeVisible();
@@ -639,6 +724,7 @@ test('a due routine switches to its existing tab only once', async () => {
   expect(errors).toEqual([]);
   await target.close();
   await page.close();
+  await other.close();
 });
 
 test('a scheduled alarm appears without navigating or interacting with the page', async () => {

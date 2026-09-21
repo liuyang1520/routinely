@@ -58,7 +58,7 @@ export function Settings({
           <div className="setting-row">
             <div>
               <label htmlFor="reminders">Floating reminders</label>
-              <p>Show a small panel on your active webpage when it’s time.</p>
+              <p>Show linked reminders on their matching page when it’s time.</p>
             </div>
             <Switch
               id="reminders"
@@ -70,8 +70,8 @@ export function Settings({
           </div>
           <div className="setting-row">
             <div>
-              <label htmlFor="focus-existing">Switch to an already-open page</label>
-              <p>When a routine is due, bring its matching tab into view once.</p>
+              <label htmlFor="focus-existing">Open or switch to the routine’s page</label>
+              <p>When a routine is due, open or focus its tab and window once.</p>
             </div>
             <Switch
               id="focus-existing"
