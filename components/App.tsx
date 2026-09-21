@@ -25,6 +25,7 @@ import {
   X,
 } from 'lucide-react';
 import { useStore } from '../hooks/use-store';
+import { useTheme } from '../hooks/use-theme';
 import {
   dayKey,
   addDays,
@@ -84,18 +85,7 @@ export function App() {
   const [help, setHelp] = useState(false);
   const [note, setNote] = useState<string>();
   const [saved, setSaved] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('routinely-theme') as 'dark' | 'light') || 'dark';
-    }
-    return 'dark';
-  });
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    document.documentElement.classList.toggle('light', theme === 'light');
-    localStorage.setItem('routinely-theme', theme);
-  }, [theme]);
+  const { theme, setTheme } = useTheme();
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (

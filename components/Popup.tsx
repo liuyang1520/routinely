@@ -1,5 +1,6 @@
-import { ArrowUpRight, Plus, Sun } from 'lucide-react';
+import { ArrowUpRight, Moon, Plus, Sun } from 'lucide-react';
 import { useStore } from '../hooks/use-store';
+import { useTheme } from '../hooks/use-theme';
 import { forDay } from '../lib/schedule';
 import { openDashboard } from '../lib/client';
 import { Brand } from './Brand';
@@ -9,19 +10,30 @@ import { QuickDelay } from './QuickDelay';
 
 export function Popup() {
   const { state, act, error } = useStore();
+  const { theme, setTheme } = useTheme();
   const items = state ? forDay(state, new Date()) : [];
   return (
     <main className="popup">
       <header>
         <Brand small />
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label="Open dashboard"
-          onClick={() => void openDashboard()}
-        >
-          <ArrowUpRight />
-        </Button>
+        <div className="popup-header-actions">
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Open dashboard"
+            onClick={() => void openDashboard()}
+          >
+            <ArrowUpRight />
+          </Button>
+        </div>
       </header>
       <QuickDelay act={act} />
       <div className="popup-heading">

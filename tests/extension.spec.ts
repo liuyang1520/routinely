@@ -73,6 +73,7 @@ async function seed(state: State) {
     state,
   );
   expect(result.error).toBeUndefined();
+  worker = context.serviceWorkers()[0] ?? worker;
   await worker.evaluate(async () => {
     await (globalThis as any).chrome.alarms.create('routinely-test', { when: Date.now() + 200 });
   });
@@ -185,6 +186,54 @@ test('the actual toolbar popup opens at a readable width', async () => {
     });
     await page.close();
   }
+});
+
+test('theme toggle in popover window synchronizes with the detailed page and vice versa', async () => {
+  await seed(emptyState());
+  const dashPage = await dashboard();
+  const popupPage = await context.newPage();
+  await popupPage.setViewportSize({ width: 420, height: 600 });
+  await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
+
+  // Both should start in dark mode by default
+  await expect(dashPage.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(popupPage.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  // Toggle theme to light mode in popup window
+  const popupThemeButton = popupPage.getByRole('button', { name: 'Switch to light mode' });
+  await expect(popupThemeButton).toBeVisible();
+  await popupThemeButton.click();
+
+  // Verify popup switched to light mode
+  await expect(popupPage.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(popupPage.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
+
+  // Verify detailed page (dashboard) automatically switched to light mode
+  await expect(dashPage.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(dashPage.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
+
+  // Toggle theme back to dark mode in detailed page (dashboard)
+  const dashThemeButton = dashPage.getByRole('button', { name: 'Switch to dark mode' });
+  await dashThemeButton.click();
+
+  // Verify detailed page switched to dark mode
+  await expect(dashPage.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(dashPage.getByRole('button', { name: 'Switch to light mode' })).toBeVisible();
+
+  // Verify popup automatically switched to dark mode (vice versa)
+  await expect(popupPage.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(popupPage.getByRole('button', { name: 'Switch to light mode' })).toBeVisible();
+
+  // Close and reopen popup to ensure persistence
+  await popupPage.close();
+  const reopenedPopup = await context.newPage();
+  await reopenedPopup.setViewportSize({ width: 420, height: 600 });
+  await reopenedPopup.goto(`chrome-extension://${extensionId}/popup.html`);
+  await expect(reopenedPopup.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  await reopenedPopup.close();
+  await dashPage.close();
+  expect(errors).toEqual([]);
 });
 
 test('alarms show isolated reminders on the active tab; snooze, notes, and completion persist', async () => {

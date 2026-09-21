@@ -2626,6 +2626,12 @@ html.popup-page,
   border-bottom: 1px solid var(--border);
 }
 
+.popup-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .popup-heading {
   padding: 20px 20px 14px;
 }
