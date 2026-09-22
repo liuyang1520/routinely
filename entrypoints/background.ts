@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
 import { emptyState, stateSchema, STORAGE_KEY, type State } from '../lib/model';
-import { dueItems, nextOccurrence, reconcile } from '../lib/schedule';
+import { dueItems, nextOccurrence, reconcile, AUTO_CHECK_DELAY_MS } from '../lib/schedule';
 import { reduceState } from '../lib/reducer';
 import { currentWebTab, openOrFocusTab } from '../lib/tabs';
 import {
@@ -16,6 +16,60 @@ export default defineBackground(() => {
   // All writes go through this queue, including alarms and messages from different tabs.
   let queue = Promise.resolve();
   let lastVisibleTab: number | undefined;
+  const autoCheckTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  function cancelAutoCheck(occurrenceId: string) {
+    const timer = autoCheckTimers.get(occurrenceId);
+    if (timer) {
+      clearTimeout(timer);
+      autoCheckTimers.delete(occurrenceId);
+    }
+  }
+
+  function scheduleAutoCheck(occurrenceId: string, tabId?: number) {
+    cancelAutoCheck(occurrenceId);
+    const timer = setTimeout(() => {
+      autoCheckTimers.delete(occurrenceId);
+      void serial(async () => {
+        if (tabId !== undefined) {
+          try {
+            const tab = await browser.tabs.get(tabId);
+            const address = tab.pendingUrl || tab.url;
+            if (tab.incognito) return;
+            const currentState = reconcile(await load());
+            const target = currentState.occurrences.find((o) => o.id === occurrenceId);
+            if (
+              !target ||
+              target.status !== 'pending' ||
+              (target.snoozedUntil && target.snoozedUntil > Date.now())
+            ) {
+              return;
+            }
+            if (
+              target.url &&
+              address &&
+              normalizedPageUrl(target.url) !== normalizedPageUrl(address)
+            ) {
+              return;
+            }
+          } catch {
+            return;
+          }
+        }
+        const state = reconcile(await load());
+        const target = state.occurrences.find((o) => o.id === occurrenceId);
+        if (
+          target &&
+          target.status === 'pending' &&
+          (!target.snoozedUntil || target.snoozedUntil <= Date.now())
+        ) {
+          const next = reduceState(state, { type: 'complete', id: occurrenceId });
+          await save(next);
+        }
+      });
+    }, AUTO_CHECK_DELAY_MS);
+    autoCheckTimers.set(occurrenceId, timer);
+  }
   async function explainNavigation(
     result: { tabId?: number; reused: boolean },
     reason: NavigationReason,
@@ -116,11 +170,9 @@ export default defineBackground(() => {
         const item = items[0]!;
         try {
           const result = await openOrFocusTab(item.url);
-          await explainNavigation(result, {
-            kind: 'routine',
-            title: item.title,
-            scheduledAt: item.scheduledAt,
-          });
+          if (item.tasks.length === 0) {
+            scheduleAutoCheck(item.id, result.tabId);
+          }
         } catch {
           // Let the next tick retry if the destination could not be opened.
           state = {
@@ -251,6 +303,7 @@ export default defineBackground(() => {
       });
     if (message.type === 'mutate')
       return serial(async () => {
+        if (message.action?.id) cancelAutoCheck(message.action.id);
         const state = reduceState(await load(), message.action);
         await save(state);
         return { state };

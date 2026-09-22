@@ -134,7 +134,7 @@
 .navigation-toast button:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--foreground);
-  transform: scale(1.08);
+  transform: scale(1.03);
 }
 
 .navigation-toast button:focus-visible {
@@ -308,12 +308,12 @@
 .reminder-panel .button:hover {
   background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
-  transform: scale(1.03);
+  transform: scale(1.01);
 }
 
 .reminder-panel .button-primary:hover {
   background: #10b981;
-  box-shadow: 0 0 30px rgba(52, 211, 153, 0.4);
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.3);
 }
 
 .reminder-panel .button:disabled {
@@ -354,7 +354,7 @@
 
 .reminder-panel .completion-check:hover {
   border-color: #34d399;
-  transform: scale(1.1);
+  transform: scale(1.04);
 }
 
 .reminder-panel .completion-check.checked {

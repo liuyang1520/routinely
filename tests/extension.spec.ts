@@ -278,11 +278,11 @@ test('alarms open the target page and keep its reminder there; snooze, notes, an
   state.occurrences[0]!.snoozedUntil = Date.now() - 1;
   await second.bringToFront();
   await seed(state);
-  await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
-  await second.bringToFront();
+  // Auto-focus happens only once per occurrence; waking from snooze does not steal focus
   await expect(second.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
   await first.bringToFront();
+  await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
   await expect(first.getByLabel('Read a little')).toBeChecked();
   expect(await first.evaluate(() => getComputedStyle(document.body).fontSize)).toBe('18px');
   // Same-document navigation must also retire the panel without a page reload.
@@ -672,11 +672,8 @@ test('a due routine switches to its existing tab and window only once', async ()
   ).toBe(created.id);
   const toast = target.getByRole('complementary', { name: 'Why Routinely opened this page' });
   const reminder = target.getByRole('region', { name: 'Routinely reminder' });
-  await expect(toast).toContainText('Switched to this tab for “Focus an existing tab”.');
+  await expect(toast).toHaveCount(0);
   await expect(reminder).toBeVisible();
-  const toastBox = (await toast.boundingBox())!;
-  const reminderBox = (await reminder.boundingBox())!;
-  expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(reminderBox.y);
   await target.screenshot({ path: 'test-results/routine-with-toast.png', animations: 'disabled' });
   await expect(other.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
   const page = await dashboard();
@@ -704,7 +701,9 @@ test('a due routine switches to its existing tab and window only once', async ()
           .url,
     ),
   ).toContain('/dashboard.html');
-  expect((await read()).occurrences[0]?.status).toBe('pending');
+  await expect
+    .poll(async () => (await read()).occurrences[0]?.status, { timeout: 10000 })
+    .toBe('completed');
   const countBefore = (await worker.evaluate(async () => (globalThis as any).chrome.tabs.query({})))
     .length;
   await page.getByRole('link', { name: 'Open Focus an existing tab', exact: true }).click();

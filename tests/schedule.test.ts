@@ -120,6 +120,24 @@ describe('durable check-ins', () => {
       tasks: [{ id: 'read', done: true }],
     });
   });
+  it('preserves tabHandledAt across snooze so auto-focus is not repeated for the same occurrence', () => {
+    const now = at('2026-03-02T21:00:00');
+    let state = reconcile({ ...emptyState(now), routines: [routine()] }, now);
+    const id = state.occurrences[0]!.id;
+    state = {
+      ...state,
+      occurrences: state.occurrences.map((o) => (o.id === id ? { ...o, tabHandledAt: now } : o)),
+    };
+    state = reduceState(state, { type: 'snooze', id }, now);
+    expect(state.occurrences[0]?.tabHandledAt).toBe(now);
+
+    // When next occurrence time is reached tomorrow, reconcile generates a new occurrence with tabHandledAt undefined
+    const tomorrow = at('2026-03-03T21:00:00');
+    const nextState = reconcile(state, tomorrow);
+    expect(nextState.occurrences).toHaveLength(2);
+    const nextOcc = nextState.occurrences.find((o) => o.id !== id);
+    expect(nextOcc?.tabHandledAt).toBeUndefined();
+  });
   it('editing and deleting a routine preserve completed history', () => {
     const now = at('2026-03-02T21:00:00');
     let state = reconcile({ ...emptyState(now), routines: [routine()] }, now);

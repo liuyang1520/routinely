@@ -125,7 +125,6 @@ export function reduceState(previous: State, input: Action, now = Date.now()): S
               status: 'pending',
               completedAt: undefined,
               snoozedUntil: now + 10 * 60000,
-              tabHandledAt: undefined,
             };
           case 'undo':
             return {

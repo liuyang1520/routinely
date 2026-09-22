@@ -72,13 +72,18 @@ export default defineContentScript({
               }}
             />
           ) : null;
+        const activeNotice = !panel && notice?.kind !== 'routine' ? notice : undefined;
         const stackPanel = currentState?.settings.position === 'top-right';
         ui.mounted?.render(
           <>
-            {(notice || (panel && stackPanel)) && (
+            {(activeNotice || (panel && stackPanel)) && (
               <div className="page-notifications position-top-right">
-                {notice && (
-                  <NavigationToast key={notice.id} notice={notice} onDismiss={dismissNotice} />
+                {activeNotice && (
+                  <NavigationToast
+                    key={activeNotice.id}
+                    notice={activeNotice}
+                    onDismiss={dismissNotice}
+                  />
                 )}
                 {stackPanel && panel}
               </div>
@@ -95,6 +100,7 @@ export default defineContentScript({
       }) => {
         if (ctx.isInvalid) return;
         if (message.type === 'navigation-notice' && message.notice) {
+          if (message.notice.kind === 'routine') return Promise.resolve({ shown: false });
           if (document.visibilityState !== 'visible') return Promise.resolve({ shown: false });
           if (!seenNotices.has(message.notice.id) && message.notice.expiresAt > Date.now()) {
             seenNotices.add(message.notice.id);

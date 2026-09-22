@@ -116,3 +116,5 @@ export function dueItems(state: State, now = Date.now()): Occurrence[] {
     )
     .sort((a, b) => a.scheduledAt - b.scheduledAt);
 }
+
+export const AUTO_CHECK_DELAY_MS = 3000;
