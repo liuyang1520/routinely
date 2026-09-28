@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Bell,
   Download,
@@ -8,25 +8,35 @@ import {
   FileJson,
   FileSpreadsheet,
   Monitor,
+  Trash2,
 } from 'lucide-react';
 import type { Action, State } from '../lib/model';
 import type { Theme } from '../lib/theme';
 import { dayKey } from '../lib/schedule';
 import { download, historyCsv, parseBackup } from '../lib/export';
+import { prunableCounts } from '../lib/retention';
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { Confirm } from './ui/dialog';
 import { CustomSelect } from './ui/select';
 
+function formatSize(bytes: number) {
+  return bytes < 1024 * 1024
+    ? `${Math.ceil(bytes / 1024)} KB`
+    : `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+}
+
 export function Settings({
   state,
   act,
+  usage,
   onPreview,
   theme,
   setTheme,
 }: {
   state: State;
   act: (action: Action) => Promise<boolean>;
+  usage?: { bytes: number; quotaBytes?: number };
   onPreview: () => void;
   theme: Theme;
   setTheme: (theme: Theme) => void;
@@ -35,10 +45,34 @@ export function Settings({
   const [backup, setBackup] = useState<State>();
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [cleanupDate, setCleanupDate] = useState(() => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() - 1);
+    return dayKey(date);
+  });
+  const [cleanupBefore, setCleanupBefore] = useState<number>();
+  const cutoff = new Date(`${cleanupDate}T00:00:00`).getTime();
+  const counts = useMemo(
+    () =>
+      Number.isFinite(cutoff) ? prunableCounts(state, cutoff) : { checkIns: 0, savedPages: 0 },
+    [state, cutoff],
+  );
+  const confirmCounts =
+    cleanupBefore === undefined
+      ? { checkIns: 0, savedPages: 0 }
+      : prunableCounts(state, cleanupBefore);
+  const cleanupTotal = counts.checkIns + counts.savedPages;
+  const usagePercent = usage?.quotaBytes
+    ? Math.round((usage.bytes / usage.quotaBytes) * 100)
+    : undefined;
+  function downloadFullBackup() {
+    download(`routinely-backup-${dayKey(Date.now())}.json`, JSON.stringify(state, null, 2));
+    setMessage('Backup download started. Keep the file somewhere safe.');
+  }
   async function readFile(file?: File) {
     if (!file) return;
     try {
-      if (file.size > 10 * 1024 * 1024) throw new Error('Choose a backup smaller than 10 MB.');
+      if (file.size > 64 * 1024 * 1024) throw new Error('Choose a backup smaller than 64 MiB.');
       setBackup(parseBackup(await file.text()));
       setError('');
     } catch (e) {
@@ -157,16 +191,49 @@ export function Settings({
           <p className="muted">
             Take your routines, notes, and progress with you whenever you like.
           </p>
+          <div className="storage-usage">
+            <strong>Storage space</strong>
+            {usage ? (
+              <>
+                <p>
+                  {formatSize(usage.bytes)} used
+                  {usage.quotaBytes ? ` of ${formatSize(usage.quotaBytes)}` : ' in this browser'}
+                  {usagePercent !== undefined
+                    ? ` (${usagePercent === 0 && usage.bytes > 0 ? '<1' : usagePercent}%)`
+                    : ''}
+                  .
+                </p>
+                {usage.quotaBytes && (
+                  <div
+                    className="storage-meter"
+                    role="progressbar"
+                    aria-label="Local storage used"
+                    aria-valuemin={0}
+                    aria-valuemax={usage.quotaBytes}
+                    aria-valuenow={Math.min(usage.bytes, usage.quotaBytes)}
+                  >
+                    <span
+                      style={{
+                        width: `${Math.min(100, (usage.bytes / usage.quotaBytes) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                )}
+                {usagePercent !== undefined && usagePercent >= 70 && (
+                  <p className="storage-usage-alert" role={usagePercent >= 90 ? 'alert' : 'status'}>
+                    {usagePercent >= 90
+                      ? 'Space is almost full. Export a backup and clear old history soon.'
+                      : 'Space is getting full. Consider exporting and clearing old history.'}
+                  </p>
+                )}
+                {!usage.quotaBytes && <p>This browser does not report a fixed storage limit.</p>}
+              </>
+            ) : (
+              <p>Storage usage is unavailable right now.</p>
+            )}
+          </div>
           <div className="export-options">
-            <button
-              onClick={() => {
-                download(
-                  `routinely-backup-${dayKey(Date.now())}.json`,
-                  JSON.stringify(state, null, 2),
-                );
-                setMessage('Backup downloaded. Keep it somewhere safe.');
-              }}
-            >
+            <button onClick={downloadFullBackup}>
               <FileJson />
               <strong>Full backup</strong>
               <span>Routines, saved pages, notes & history</span>
@@ -209,6 +276,37 @@ export function Settings({
               Import backup
             </Button>
           </div>
+          <div className="storage-cleanup">
+            <h3>Clear old history</h3>
+            <p>
+              Choose a cutoff date. Finished check-ins and opened or cancelled saved pages due
+              before that date can be removed. Your routines and pending items stay.
+            </p>
+            <div className="storage-cleanup-controls">
+              <label htmlFor="cleanup-date">Remove history before</label>
+              <input
+                id="cleanup-date"
+                type="date"
+                value={cleanupDate}
+                max={dayKey(Date.now())}
+                onChange={(event) => setCleanupDate(event.target.value)}
+              />
+            </div>
+            <p>
+              {counts.checkIns} check-ins and {counts.savedPages} saved pages would be removed.
+            </p>
+            <Button
+              variant="outline"
+              disabled={!cleanupTotal || cutoff > Date.now()}
+              onClick={() => {
+                downloadFullBackup();
+                setCleanupBefore(cutoff);
+              }}
+            >
+              <Trash2 />
+              Download backup and review cleanup
+            </Button>
+          </div>
           {error && (
             <p role="alert" className="form-error">
               {error}
@@ -236,6 +334,22 @@ export function Settings({
               if (ok) setMessage('Your backup has been restored.');
             });
           setBackup(undefined);
+        }}
+      />
+      <Confirm
+        open={cleanupBefore !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setCleanupBefore(undefined);
+        }}
+        title="Delete this old history?"
+        description={`The backup download was started. Check that you saved it before continuing. This will delete ${confirmCounts.checkIns} finished check-ins and ${confirmCounts.savedPages} opened or cancelled saved pages. This cannot be undone without your backup.`}
+        label="Delete old history"
+        onConfirm={() => {
+          if (cleanupBefore !== undefined)
+            void act({ type: 'prune-history', before: cleanupBefore }).then((ok) => {
+              if (ok) setMessage('Old history removed. Keep your backup to restore these records.');
+            });
+          setCleanupBefore(undefined);
         }}
       />
     </>

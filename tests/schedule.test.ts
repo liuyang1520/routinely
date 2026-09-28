@@ -170,6 +170,11 @@ describe('portable data', () => {
     const state = { ...emptyState(), routines: [routine()], scratchpad: 'Remember this' };
     expect(parseBackup(JSON.stringify(state))).toEqual(state);
   });
+  it('accepts a valid backup file larger than the former 10 MiB import limit', () => {
+    const state = emptyState();
+    const text = JSON.stringify(state) + ' '.repeat(10 * 1024 * 1024);
+    expect(parseBackup(text)).toEqual(state);
+  });
   it('converts legacy categories to labels and drops legacy subtasks', () => {
     const oldRoutine = {
       ...routine(),

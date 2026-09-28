@@ -1,11 +1,15 @@
 import { actionSchema, type Action, type State } from './model';
 import { forDay, reconcile } from './schedule';
+import { pruneHistory } from './retention';
 
 export function reduceState(previous: State, input: Action, now = Date.now()): State {
   const action = actionSchema.parse(input);
   if (action.type === 'import') return reconcile(action.value, now);
   const state = reconcile(previous, now);
   switch (action.type) {
+    case 'prune-history':
+      if (action.before > now) throw new Error('Choose a date before today.');
+      return pruneHistory(state, action.before);
     case 'add-delayed-view': {
       if (action.item.dueAt <= now) throw new Error('Choose a time in the future.');
       return {

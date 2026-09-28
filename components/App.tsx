@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../hooks/use-store';
 import { useTheme } from '../hooks/use-theme';
+import { useStorageUsage } from '../hooks/use-storage-usage';
 import { dayKey, addDays, forDay, scheduleLabel, startOfDay, timeLabel } from '../lib/schedule';
 import type { Routine } from '../lib/model';
 import { download } from '../lib/export';
@@ -67,6 +68,7 @@ const templates: Template[] = [
 ];
 export function App() {
   const { state, act, error, clearError } = useStore();
+  const storageUsage = useStorageUsage(state);
   const [page, setPage] = useState<Page>('today');
   const [date, setDate] = useState(startOfDay(Date.now()));
   const [search, setSearch] = useState('');
@@ -132,6 +134,9 @@ export function App() {
     setSearch('');
     setFilterLabel('');
   };
+  const storagePercent = storageUsage?.quotaBytes
+    ? Math.round((storageUsage.bytes / storageUsage.quotaBytes) * 100)
+    : 0;
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -246,6 +251,17 @@ export function App() {
           </div>
         </header>
         <main className="main-content">
+          {page !== 'settings' && storagePercent >= 70 && (
+            <div className="storage-warning" role={storagePercent >= 90 ? 'alert' : 'status'}>
+              <span>
+                Storage is {storagePercent >= 90 ? 'almost full' : 'getting full'} ({storagePercent}
+                % used). Export a backup and review old history.
+              </span>
+              <Button variant="outline" size="sm" onClick={() => changePage('settings')}>
+                Review storage
+              </Button>
+            </div>
+          )}
           {error && (
             <div className="error-banner" role="alert">
               {error}
@@ -262,6 +278,7 @@ export function App() {
             <Settings
               state={state}
               act={act}
+              usage={storageUsage}
               onPreview={() => setPreview(true)}
               theme={theme}
               setTheme={setTheme}

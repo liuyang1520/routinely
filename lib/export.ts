@@ -1,7 +1,6 @@
 import { stateSchema, type State } from './model';
 
 export function parseBackup(text: string): State {
-  if (text.length > 10 * 1024 * 1024) throw new Error('Choose a backup smaller than 10 MB.');
   const parsed = stateSchema.safeParse(JSON.parse(text));
   if (!parsed.success) throw new Error('This file is not a valid Routinely v1 backup.');
   return parsed.data;

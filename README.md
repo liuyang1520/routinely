@@ -49,6 +49,7 @@ Open <http://127.0.0.1:3000>. This preview uses separate localStorage data and s
 - Pause, resume, edit, and delete routines; completed history remains available.
 - Completion calendar, four-week chart, 30-day metrics, and filterable check-in history.
 - Full JSON backup/restore and spreadsheet-friendly CSV history export.
+- Settings shows local storage usage, with dashboard warnings at 70% and 90% of a reported quota. Backup-first cleanup removes finished check-ins and opened or cancelled saved pages before a chosen date. Cleanup preserves routines and pending items.
 - Light, dark, and System appearance modes. System follows device color changes.
 - Local storage only: no account, telemetry, backend, or remote fonts. The three starter suggestions are optional templates; no sample history is added.
 
@@ -69,7 +70,7 @@ Open <http://127.0.0.1:3000>. This preview uses separate localStorage data and s
 - Closing a live reminder snoozes the displayed check-in for ten minutes, then brings its page forward again. Multiple due routines for the current page share one panel with pagination.
 - Browser-owned pages, extension stores, and some built-in document viewers cannot host content scripts. The toolbar badge and popup still expose due routines. Existing pages need a refresh after initial installation or extension reload.
 - The completion rate is completed / (completed + skipped + missed), excluding pending check-ins. Charts and calendars use the scheduled date, including early completions.
-- Notes and the scratchpad save when their field loses focus. All data is local to this browser profile; export a backup before uninstalling or moving devices. Standard browser local-storage quotas apply.
+- Notes and the scratchpad save when their field loses focus. All data is local to this browser profile; export a backup before uninstalling or moving devices. The extension uses `storage.local`, whose quota depends on the browser (10 MiB in current Chrome without `unlimitedStorage`). The separate web preview uses page `localStorage`. Backup imports accept files up to 64 MiB so a formatted export near Chrome's storage limit can still be restored.
 
 ## Verify
 

@@ -24,6 +24,20 @@ export async function readState(): Promise<State> {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   return state;
 }
+export async function getStorageUsage(): Promise<{ bytes: number; quotaBytes?: number }> {
+  if (extensionContext()) {
+    const { browser } = await import('wxt/browser');
+    const bytes = await browser.storage.local.getBytesInUse(null);
+    const quotaBytes = Number(browser.storage.local.QUOTA_BYTES);
+    return { bytes, quotaBytes: Number.isFinite(quotaBytes) ? quotaBytes : undefined };
+  }
+  let bytes = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key) bytes += new Blob([key, localStorage.getItem(key) ?? '']).size;
+  }
+  return { bytes };
+}
 let queue = Promise.resolve();
 export async function dispatch(action: Action): Promise<State> {
   if (extensionContext()) {

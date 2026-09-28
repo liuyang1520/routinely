@@ -116,6 +116,7 @@ export const actionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('scratchpad'), value: z.string().max(20000) }),
   z.object({ type: z.literal('settings'), value: settingsSchema }),
   z.object({ type: z.literal('import'), value: stateSchema }),
+  z.object({ type: z.literal('prune-history'), before: timestamp }),
   z.object({ type: z.literal('add-delayed-view'), item: delayedViewSchema }),
   z.object({ type: z.literal('cancel-delayed-view'), id: z.string() }),
   z.object({ type: z.literal('remove-delayed-view'), id: z.string() }),

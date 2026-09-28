@@ -7,7 +7,7 @@ import {
   type Page,
 } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { emptyState, type State } from '../lib/model';
@@ -151,6 +151,110 @@ test('create, edit, complete, export, and restore a routine in the real extensio
   await openedDashboard.close();
   await popup.close();
   expect(errors).toEqual([]);
+  await page.close();
+});
+
+test('storage usage and cleanup preserve a restorable backup', async () => {
+  const now = Date.now();
+  const old = now - 3 * 365 * 86400000;
+  const recent = now - 2 * 86400000;
+  const state = {
+    ...emptyState(now),
+    occurrences: [
+      {
+        id: 'old-check-in',
+        routineId: 'old-routine',
+        title: 'Old check-in',
+        label: '',
+        url: '',
+        scheduledAt: old,
+        status: 'completed' as const,
+        notes: 'Keep in backup',
+      },
+      {
+        id: 'recent-check-in',
+        routineId: 'recent-routine',
+        title: 'Recent check-in',
+        label: '',
+        url: '',
+        scheduledAt: recent,
+        status: 'completed' as const,
+        notes: '',
+      },
+    ],
+    delayedViews: [
+      {
+        id: 'old-page',
+        title: 'Old page',
+        url: 'https://example.com/old',
+        createdAt: old,
+        dueAt: old,
+        status: 'opened' as const,
+        openedAt: old,
+      },
+      {
+        id: 'recent-page',
+        title: 'Recent page',
+        url: 'https://example.com/recent',
+        createdAt: recent,
+        dueAt: recent,
+        status: 'opened' as const,
+        openedAt: recent,
+      },
+    ],
+  };
+  await seed(state);
+  const page = await dashboard();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByText('Storage space')).toBeVisible();
+  await expect(page.getByText(/used of 10\.0 MiB/)).toBeVisible();
+  const cutoff = new Date(now);
+  cutoff.setFullYear(cutoff.getFullYear() - 1);
+  await page.getByLabel('Remove history before').fill(cutoff.toISOString().slice(0, 10));
+  await expect(page.getByText('1 check-ins and 1 saved pages would be removed.')).toBeVisible();
+
+  const downloadStarted = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download backup and review cleanup' }).click();
+  const backup = await downloadStarted;
+  const exported = JSON.parse(await readFile((await backup.path())!, 'utf8')) as State;
+  expect(exported.occurrences.map((item) => item.id)).toContain('old-check-in');
+  expect(exported.delayedViews.map((item) => item.id)).toContain('old-page');
+  await expect(page.getByRole('alertdialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Delete old history' }).click();
+  await expect
+    .poll(async () => (await read()).occurrences.map((item) => item.id))
+    .toEqual(['recent-check-in']);
+  expect((await read()).delayedViews.map((item) => item.id)).toEqual(['recent-page']);
+  await expect(page.getByText('0 check-ins and 0 saved pages would be removed.')).toBeVisible();
+  await page.getByLabel('Import Routinely backup').setInputFiles((await backup.path())!);
+  await page.getByRole('button', { name: 'Replace and restore' }).click();
+  await expect
+    .poll(async () => (await read()).occurrences.map((item) => item.id))
+    .toEqual(['old-check-in', 'recent-check-in']);
+  expect((await read()).delayedViews.map((item) => item.id)).toEqual(['old-page', 'recent-page']);
+  await page.evaluate(
+    async (bytes) => {
+      await (globalThis as any).chrome.storage.local.set({
+        'routinely-test-padding': 'x'.repeat(bytes),
+      });
+    },
+    Math.floor(7.4 * 1024 * 1024),
+  );
+  await page.reload();
+  await expect(page.getByText(/Storage is getting full/)).toBeVisible();
+  await page.evaluate(
+    async (bytes) => {
+      await (globalThis as any).chrome.storage.local.set({
+        'routinely-test-padding': 'x'.repeat(bytes),
+      });
+    },
+    Math.floor(9.2 * 1024 * 1024),
+  );
+  await page.reload();
+  await expect(page.getByText(/Storage is almost full/)).toBeVisible();
+  await page.evaluate(async () => {
+    await (globalThis as any).chrome.storage.local.remove('routinely-test-padding');
+  });
   await page.close();
 });
 
