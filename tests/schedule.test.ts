@@ -18,9 +18,8 @@ function routine(overrides: Partial<Routine> = {}): Routine {
     id: 'news',
     title: 'Read Hacker News',
     url: 'https://news.ycombinator.com',
-    category: 'Learning',
+    label: 'Learning',
     notes: 'One good idea',
-    tasks: [{ id: 'read', title: 'Read a story' }],
     enabled: true,
     createdAt: at('2026-03-01T00:00:00'),
     startAt: at('2026-03-01T00:00:00'),
@@ -107,17 +106,15 @@ describe('durable check-ins', () => {
     expect(later.occurrences[0]?.status).toBe('completed');
     expect(dueItems(later, at('2026-03-02T22:00:00'))).toHaveLength(0);
   });
-  it('snoozes for ten minutes and restores the same checklist and note', () => {
+  it('snoozes for ten minutes and restores the note', () => {
     const now = at('2026-03-02T21:00:00');
     let state = reconcile({ ...emptyState(now), routines: [routine()] }, now);
     const id = state.occurrences[0]!.id;
-    state = reduceState(state, { type: 'task', id, taskId: 'read', done: true }, now);
     state = reduceState(state, { type: 'note', id, value: 'Saved a story' }, now);
     state = reduceState(state, { type: 'snooze', id }, now);
     expect(dueItems(state, now + 9 * 60000)).toHaveLength(0);
     expect(dueItems(state, now + 10 * 60000)[0]).toMatchObject({
       notes: 'Saved a story',
-      tasks: [{ id: 'read', done: true }],
     });
   });
   it('preserves tabHandledAt across snooze so auto-focus is not repeated for the same occurrence', () => {
@@ -172,6 +169,31 @@ describe('portable data', () => {
   it('round-trips all user data in a JSON backup', () => {
     const state = { ...emptyState(), routines: [routine()], scratchpad: 'Remember this' };
     expect(parseBackup(JSON.stringify(state))).toEqual(state);
+  });
+  it('converts legacy categories to labels and drops legacy subtasks', () => {
+    const oldRoutine = {
+      ...routine(),
+      label: undefined,
+      category: 'Learning',
+      tasks: [{ id: 'read', title: 'Read' }],
+    };
+    const oldOccurrence = {
+      ...occurrenceOn(routine(), new Date('2026-03-02T12:00:00'))!,
+      label: undefined,
+      category: 'Learning',
+      tasks: [{ id: 'read', title: 'Read', done: true }],
+    };
+    const restored = parseBackup(
+      JSON.stringify({
+        ...emptyState(),
+        routines: [oldRoutine],
+        occurrences: [oldOccurrence],
+      }),
+    );
+    expect(restored.routines[0]?.label).toBe('Learning');
+    expect(restored.occurrences[0]?.label).toBe('Learning');
+    expect(restored.routines[0]).not.toHaveProperty('tasks');
+    expect(restored.occurrences[0]).not.toHaveProperty('tasks');
   });
   it('rejects unsafe links, duplicate IDs, and unsupported versions', () => {
     expect(() =>

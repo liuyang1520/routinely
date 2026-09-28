@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Plus, Trash2, Link2, Clock3, ListChecks } from 'lucide-react';
+import { Plus, Link2, Clock3 } from 'lucide-react';
 import { routineSchema, type Routine, type Schedule } from '../lib/model';
 import { weekDays } from '../lib/schedule';
 import { Modal } from './ui/dialog';
@@ -9,7 +9,7 @@ import { CustomSelect } from './ui/select';
 export type Template = {
   title: string;
   url: string;
-  category: Routine['category'];
+  label: string;
   time: string;
   notes: string;
 };
@@ -26,9 +26,7 @@ export function RoutineForm({
 }) {
   const [title, setTitle] = useState(routine?.title ?? template?.title ?? '');
   const [url, setUrl] = useState(routine?.url ?? template?.url ?? '');
-  const [category, setCategory] = useState<Routine['category']>(
-    routine?.category ?? template?.category ?? 'Personal',
-  );
+  const [label, setLabel] = useState(routine?.label ?? template?.label ?? '');
   const [notes, setNotes] = useState(routine?.notes ?? template?.notes ?? '');
   const [schedule, setSchedule] = useState<Schedule>(
     routine?.schedule ?? {
@@ -39,7 +37,6 @@ export function RoutineForm({
       interval: 2,
     },
   );
-  const [tasks, setTasks] = useState(routine?.tasks ?? []);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   async function submit(event: FormEvent) {
@@ -48,10 +45,9 @@ export function RoutineForm({
       id: routine?.id ?? crypto.randomUUID(),
       title,
       url: url.trim(),
-      category,
+      label,
       notes,
       schedule,
-      tasks: tasks.filter((t) => t.title.trim()),
       enabled: routine?.enabled ?? true,
       createdAt: routine?.createdAt ?? Date.now(),
       startAt: routine?.startAt ?? Date.now(),
@@ -87,7 +83,6 @@ export function RoutineForm({
             autoFocus
             required
             maxLength={120}
-            placeholder="e.g. Catch up on Hacker News"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -100,19 +95,15 @@ export function RoutineForm({
             <input
               type="url"
               maxLength={2048}
-              placeholder="https://news.ycombinator.com"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
             />
           </label>
-          <label className="category-select">
-            Category
-            <CustomSelect
-              aria-label="Category"
-              value={category}
-              onChange={(c) => setCategory(c as Routine['category'])}
-              options={['Personal', 'Learning', 'Wellbeing', 'Work']}
-            />
+          <label className="routine-label-field">
+            <span>
+              Label <em>optional</em>
+            </span>
+            <input maxLength={60} value={label} onChange={(e) => setLabel(e.target.value)} />
           </label>
         </div>
         <div className="form-section">
@@ -211,46 +202,7 @@ export function RoutineForm({
           </p>
         </div>
         <div className="form-section">
-          <h3>
-            <ListChecks size={16} /> A few small steps <em>optional</em>
-          </h3>
-          <div className="task-editor">
-            {tasks.map((task, i) => (
-              <div key={task.id}>
-                <span className="empty-checkbox" />
-                <input
-                  aria-label={`Step ${i + 1}`}
-                  maxLength={200}
-                  placeholder="Add a small action…"
-                  value={task.title}
-                  onChange={(e) =>
-                    setTasks(
-                      tasks.map((t) => (t.id === task.id ? { ...t, title: e.target.value } : t)),
-                    )
-                  }
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Remove step ${i + 1}`}
-                  onClick={() => setTasks(tasks.filter((t) => t.id !== task.id))}
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={tasks.length >= 50}
-            onClick={() => setTasks([...tasks, { id: crypto.randomUUID(), title: '' }])}
-          >
-            <Plus /> Add a step
-          </Button>
-          <label className="mt-4">
+          <label>
             Notes
             <textarea
               rows={3}

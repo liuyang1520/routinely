@@ -10,6 +10,7 @@ import {
   Monitor,
 } from 'lucide-react';
 import type { Action, State } from '../lib/model';
+import type { Theme } from '../lib/theme';
 import { dayKey } from '../lib/schedule';
 import { download, historyCsv, parseBackup } from '../lib/export';
 import { Button } from './ui/button';
@@ -21,10 +22,14 @@ export function Settings({
   state,
   act,
   onPreview,
+  theme,
+  setTheme,
 }: {
   state: State;
   act: (action: Action) => Promise<boolean>;
   onPreview: () => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [backup, setBackup] = useState<State>();
@@ -51,6 +56,28 @@ export function Settings({
         </div>
       </div>
       <div className="settings-layout">
+        <section className="surface settings-card">
+          <h2>
+            <Monitor size={18} /> Appearance
+          </h2>
+          <div className="setting-row">
+            <div>
+              <label htmlFor="theme">Color mode</label>
+              <p>Follow your device, or choose light or dark.</p>
+            </div>
+            <CustomSelect
+              id="theme"
+              aria-label="Color mode"
+              value={theme}
+              onChange={(value) => setTheme(value as Theme)}
+              options={[
+                { value: 'system', label: 'System' },
+                { value: 'light', label: 'Light' },
+                { value: 'dark', label: 'Dark' },
+              ]}
+            />
+          </div>
+        </section>
         <section className="surface settings-card">
           <h2>
             <Bell size={18} /> Gentle reminders

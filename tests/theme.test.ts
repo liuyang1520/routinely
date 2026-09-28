@@ -53,6 +53,7 @@ describe('theme utilities', () => {
       dispatchEvent: vi.fn(),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
+      matchMedia: vi.fn(() => ({ matches: true })),
     });
   });
 
@@ -61,13 +62,23 @@ describe('theme utilities', () => {
     vi.restoreAllMocks();
   });
 
-  it('defaults to dark theme when nothing is stored', () => {
-    expect(getStoredTheme()).toBe('dark');
+  it('defaults to the device theme when nothing is stored', () => {
+    expect(getStoredTheme()).toBe('system');
+    applyThemeToDocument('system');
+    expect(mockHtmlElement.setAttribute).toHaveBeenCalledWith('data-theme', 'dark');
+    vi.mocked(window.matchMedia).mockReturnValue({ matches: false } as MediaQueryList);
+    applyThemeToDocument('system');
+    expect(mockHtmlElement.setAttribute).toHaveBeenCalledWith('data-theme', 'light');
   });
 
   it('reads stored light theme from localStorage', () => {
     localStorageStore[THEME_KEY] = 'light';
     expect(getStoredTheme()).toBe('light');
+  });
+
+  it('persists system mode', async () => {
+    await persistTheme('system');
+    expect(localStorageStore[THEME_KEY]).toBe('system');
   });
 
   it('applies theme attributes and classes to documentElement', () => {

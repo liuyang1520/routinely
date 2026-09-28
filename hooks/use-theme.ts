@@ -18,6 +18,11 @@ export function useTheme() {
 
   useEffect(() => {
     applyThemeToDocument(theme);
+    if (theme !== 'system' || typeof window === 'undefined' || !window.matchMedia) return;
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => applyThemeToDocument('system');
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
   }, [theme]);
 
   useEffect(() => {
@@ -61,7 +66,7 @@ export function useTheme() {
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    setTheme((prev) => (prev === 'dark' ? 'light' : prev === 'light' ? 'system' : 'dark'));
   }, [setTheme]);
 
   return { theme, setTheme, toggleTheme };

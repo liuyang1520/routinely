@@ -7,17 +7,20 @@ import { dueItems } from '../lib/schedule';
 import { emptyState, type Action, type State } from '../lib/model';
 import { reduceState } from '../lib/reducer';
 import { openDashboard } from '../lib/client';
+import { resolvedTheme, type Theme } from '../lib/theme';
 
 export function ReminderPanel({
   state,
   act,
   onClose,
   preview = false,
+  colorMode,
 }: {
   state: State;
   act: (action: Action) => Promise<boolean>;
   onClose: (id?: string) => void;
   preview?: boolean;
+  colorMode: 'light' | 'dark';
 }) {
   const items = dueItems(state);
   const [index, setIndex] = useState(0);
@@ -31,6 +34,7 @@ export function ReminderPanel({
   return (
     <section
       className={`reminder-panel position-${state.settings.position}`}
+      data-theme={colorMode}
       aria-label={preview ? 'Reminder preview' : 'Routinely reminder'}
     >
       <header>
@@ -85,9 +89,7 @@ export function ReminderPanel({
             ))}
           </div>
         ) : (
-          <span>
-            {preview ? 'Try the checklist, notes, or snooze.' : 'One small thing at a time.'}
-          </span>
+          <span>{preview ? 'Try notes or snooze.' : 'One small thing at a time.'}</span>
         )}
         <button
           onClick={() => {
@@ -108,9 +110,11 @@ export function ReminderPanel({
 export function ReminderPreview({
   position,
   onClose,
+  theme,
 }: {
   position: State['settings']['position'];
   onClose: () => void;
+  theme: Theme;
 }) {
   const [state, setState] = useState<State>(() => {
     const now = Date.now();
@@ -122,9 +126,8 @@ export function ReminderPreview({
           id: 'preview',
           title: 'Catch up on Hacker News',
           url: 'https://news.ycombinator.com',
-          category: 'Learning',
+          label: 'Learning',
           notes: '',
-          tasks: [],
           createdAt: now,
           startAt: now,
           enabled: true,
@@ -136,15 +139,11 @@ export function ReminderPreview({
           id: 'preview-check-in',
           routineId: 'preview',
           title: 'Catch up on Hacker News',
-          category: 'Learning',
+          label: 'Learning',
           url: 'https://news.ycombinator.com',
           scheduledAt: now,
           status: 'pending',
           notes: 'Find one idea worth coming back to.',
-          tasks: [
-            { id: 'read', title: 'Read something interesting', done: false },
-            { id: 'save', title: 'Save a favorite for later', done: false },
-          ],
         },
       ],
     };
@@ -155,6 +154,7 @@ export function ReminderPreview({
         <ReminderPanel
           state={state}
           preview
+          colorMode={resolvedTheme(theme)}
           onClose={onClose}
           act={async (action) => {
             setState((s) => reduceState(s, action));

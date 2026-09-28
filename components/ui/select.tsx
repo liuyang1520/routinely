@@ -115,7 +115,7 @@ export function CustomSelect({
 
   return (
     <div
-      className={`custom-select-container ${className}`}
+      className={`custom-select-container ${open ? 'open' : ''} ${className}`}
       ref={containerRef}
       onKeyDown={handleKeyDown}
     >

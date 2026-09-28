@@ -8,6 +8,7 @@ import type { NavigationNotice } from '../lib/navigation-notice';
 import { dispatch } from '../lib/client';
 import { dueItems } from '../lib/schedule';
 import type { State } from '../lib/model';
+import { isTheme, readExtensionTheme, resolvedTheme, THEME_KEY, type Theme } from '../lib/theme';
 import '../assets/panel.css';
 
 export default defineContentScript({
@@ -32,6 +33,7 @@ export default defineContentScript({
       if (ctx.isInvalid) return;
       ui.mount();
       let state: State | undefined;
+      let theme: Theme = 'system';
       let panelVisible = false;
       let notice: NavigationNotice | undefined;
       const seenNotices = new Set<string>();
@@ -51,6 +53,7 @@ export default defineContentScript({
           currentState && panelVisible ? (
             <ReminderPanel
               state={currentState}
+              colorMode={resolvedTheme(theme)}
               act={async (action) => {
                 try {
                   if (ctx.isInvalid) return false;
@@ -92,6 +95,33 @@ export default defineContentScript({
           </>,
         );
       };
+      let receivedThemeChange = false;
+      const onThemeChange = (changes: Record<string, { newValue?: unknown }>, area: string) => {
+        const value = changes[THEME_KEY]?.newValue;
+        if (area !== 'local' || !isTheme(value)) return;
+        receivedThemeChange = true;
+        theme = value;
+        render();
+      };
+      browser.storage.onChanged.addListener(onThemeChange);
+      ctx.onInvalidated(() => {
+        try {
+          if (browser.runtime.id) browser.storage.onChanged.removeListener(onThemeChange);
+        } catch {
+          // The extension may have been reloaded already.
+        }
+      });
+      void readExtensionTheme().then((stored) => {
+        if (ctx.isInvalid || receivedThemeChange || !stored) return;
+        theme = stored;
+        render();
+      });
+      const deviceTheme = window.matchMedia?.('(prefers-color-scheme: dark)');
+      if (deviceTheme) {
+        ctx.addEventListener(deviceTheme, 'change', () => {
+          if (theme === 'system') render();
+        });
+      }
       const receive = (message: {
         type: string;
         visible?: boolean;

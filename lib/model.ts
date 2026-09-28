@@ -1,7 +1,12 @@
 import { z } from 'zod';
 
 const timestamp = z.number().finite().nonnegative();
-export const categorySchema = z.enum(['Personal', 'Learning', 'Wellbeing', 'Work']);
+const labelSchema = z.string().trim().max(60).default('');
+function migrateLegacyLabel(value: unknown) {
+  if (!value || typeof value !== 'object') return value;
+  const record = value as Record<string, unknown>;
+  return { ...record, label: record.label ?? record.category ?? '' };
+}
 export const scheduleSchema = z
   .object({
     frequency: z.enum(['daily', 'weekly', 'monthly', 'interval']),
@@ -22,36 +27,36 @@ export const safeUrl = z
       return false;
     }
   }, 'Use a complete http:// or https:// link.');
-const taskSchema = z.object({
-  id: z.string().min(1).max(100),
-  title: z.string().trim().min(1).max(200),
-});
-export const routineSchema = z.object({
-  id: z.string().min(1).max(100),
-  title: z.string().trim().min(1).max(120),
-  url: safeUrl,
-  category: categorySchema,
-  notes: z.string().max(10000),
-  tasks: z.array(taskSchema).max(50),
-  schedule: scheduleSchema,
-  enabled: z.boolean(),
-  createdAt: timestamp,
-  startAt: timestamp,
-});
-export const occurrenceSchema = z.object({
-  id: z.string().min(1).max(200),
-  routineId: z.string().min(1).max(100),
-  title: z.string().max(120),
-  category: categorySchema,
-  url: safeUrl,
-  scheduledAt: timestamp,
-  status: z.enum(['pending', 'completed', 'skipped', 'missed']),
-  completedAt: timestamp.optional(),
-  snoozedUntil: timestamp.optional(),
-  tabHandledAt: timestamp.optional(),
-  notes: z.string().max(10000),
-  tasks: z.array(taskSchema.extend({ done: z.boolean() })).max(50),
-});
+export const routineSchema = z.preprocess(
+  migrateLegacyLabel,
+  z.object({
+    id: z.string().min(1).max(100),
+    title: z.string().trim().min(1).max(120),
+    url: safeUrl,
+    label: labelSchema,
+    notes: z.string().max(10000),
+    schedule: scheduleSchema,
+    enabled: z.boolean(),
+    createdAt: timestamp,
+    startAt: timestamp,
+  }),
+);
+export const occurrenceSchema = z.preprocess(
+  migrateLegacyLabel,
+  z.object({
+    id: z.string().min(1).max(200),
+    routineId: z.string().min(1).max(100),
+    title: z.string().max(120),
+    label: labelSchema,
+    url: safeUrl,
+    scheduledAt: timestamp,
+    status: z.enum(['pending', 'completed', 'skipped', 'missed']),
+    completedAt: timestamp.optional(),
+    snoozedUntil: timestamp.optional(),
+    tabHandledAt: timestamp.optional(),
+    notes: z.string().max(10000),
+  }),
+);
 export const settingsSchema = z.object({
   reminders: z.boolean(),
   focusExistingTabs: z.boolean().default(true),
@@ -107,7 +112,6 @@ export const actionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('skip'), id: z.string() }),
   z.object({ type: z.literal('snooze'), id: z.string() }),
   z.object({ type: z.literal('undo'), id: z.string() }),
-  z.object({ type: z.literal('task'), id: z.string(), taskId: z.string(), done: z.boolean() }),
   z.object({ type: z.literal('note'), id: z.string(), value: z.string().max(10000) }),
   z.object({ type: z.literal('scratchpad'), value: z.string().max(20000) }),
   z.object({ type: z.literal('settings'), value: settingsSchema }),

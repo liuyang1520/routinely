@@ -39,12 +39,11 @@ export function occurrenceOn(routine: Routine, day: Date): Occurrence | undefine
     id: `${routine.id}:${dayKey(day)}:${routine.schedule.time}`,
     routineId: routine.id,
     title: routine.title,
-    category: routine.category,
+    label: routine.label,
     url: routine.url,
     scheduledAt: scheduled.getTime(),
     status: 'pending',
     notes: routine.notes,
-    tasks: routine.tasks.map((t) => ({ ...t, done: false })),
   };
 }
 export function forDay(state: State, day: Date): Occurrence[] {

@@ -39,16 +39,17 @@ Open <http://127.0.0.1:3000>. This preview uses separate localStorage data and s
 ## Features
 
 - Daily schedules, selected weekdays (including a weekdays shortcut), monthly dates, and every N days.
-- Optional HTTP/HTTPS links, categories, routine notes, and up to 50 checklist steps.
+- Optional HTTP/HTTPS links, free-text labels, and routine notes.
 - A reminder on the routine's matching page in the top-right corner by default; all four corners are available in Settings. Routines without a link appear on the active webpage.
-- Open a link, complete a check-in, skip it, or snooze for ten minutes. Each check-in keeps independent notes and checklist results.
+- Open a link, complete a check-in, skip it, or snooze for ten minutes. Each check-in keeps independent notes.
 - Today view with a navigable week, early completion, a scratchpad, and a compact toolbar popup.
 - **View later**: save the current tab from the toolbar for 1 hour, 3 hours, 1 day, or a custom date/time. Manage, reschedule, cancel, and reopen saved pages from the dashboard.
 - Links reuse matching open tabs across browser windows. Due routines automatically open or focus their page once; this is configurable in Settings.
-- A top-right toast explains why Routinely opened or switched to a page, including the routine or saved-page title and scheduled time. It appears even without a checklist, dismisses after eight seconds, and pauses while hovered or keyboard-focused.
+- A top-right toast explains why Routinely opened or switched to a page, including the routine or saved-page title and scheduled time. It dismisses after eight seconds and pauses while hovered or keyboard-focused.
 - Pause, resume, edit, and delete routines; completed history remains available.
 - Completion calendar, four-week chart, 30-day metrics, and filterable check-in history.
 - Full JSON backup/restore and spreadsheet-friendly CSV history export.
+- Light, dark, and System appearance modes. System follows device color changes.
 - Local storage only: no account, telemetry, backend, or remote fonts. The three starter suggestions are optional templates; no sample history is added.
 
 ## How reminders behave
@@ -58,7 +59,7 @@ Open <http://127.0.0.1:3000>. This preview uses separate localStorage data and s
 - Recurrences use calendar arithmetic across daylight-saving changes. A nonexistent spring-forward time moves forward with the local clock; the repeated fall-back hour produces one check-in.
 - Browser alarms schedule the next occurrence and snooze wake-up. A one-minute heartbeat and tab/focus events recover from suspended workers, browser restarts, and timezone changes. Alarms can run late while the device sleeps.
 - Missed time is recovered on return. Pending check-ins become **missed after 24 hours**; completed and skipped records retain their results. Paused days are not backfilled.
-- Opening a routine's link does **not** mark it complete. Completing the routine does **not** automatically check its optional steps.
+- Manually opening a routine's link does **not** mark it complete. When Routinely automatically opens or focuses a due routine's page, it marks the check-in complete after a short delay if the page stays open.
 - Tab reuse matches the full URL (normalizing host case and default ports), preserving query parameters and fragments so different articles and app routes stay separate. Normal clicks reuse tabs; modified clicks keep standard browser behavior.
 - When a routine is due, its matching tab and window are brought forward once, opening a tab if needed. With several routines due together, the first linked routine is selected. Disabling floating reminders or the tab-switch setting disables automatic switching for routine reminders. Linked reminder panels only appear on the matching page and disappear when you switch or navigate away; routines without a link appear on the active webpage.
 - Delayed views are one-off requests: at the scheduled time, the existing tab is focused or a new tab is opened. The page stays open when you save it, and can safely be closed afterward. Delayed views operate independently of floating-reminder settings. A one-day preset means 24 hours.

@@ -251,7 +251,6 @@ export function Activity({
                     <th>Routine</th>
                     <th>Scheduled</th>
                     <th>Result</th>
-                    <th>Steps</th>
                     <th>
                       <span className="sr-only">Action</span>
                     </th>
@@ -263,8 +262,8 @@ export function Activity({
                       <td>
                         <strong>{o.title}</strong>
                         <small>
-                          {o.category}
-                          {o.notes ? ` · ${o.notes.slice(0, 90)}` : ''}
+                          {o.label}
+                          {o.notes ? `${o.label ? ' · ' : ''}${o.notes.slice(0, 90)}` : ''}
                         </small>
                       </td>
                       <td>
@@ -277,11 +276,6 @@ export function Activity({
                       <td>
                         <span className={`status-tag status-${o.status}`}>{o.status}</span>
                         {o.completedAt && <small>{timeLabel(o.completedAt)}</small>}
-                      </td>
-                      <td>
-                        {o.tasks.length
-                          ? `${o.tasks.filter((t) => t.done).length}/${o.tasks.length}`
-                          : '—'}
                       </td>
                       <td>
                         {o.status !== 'completed' && (

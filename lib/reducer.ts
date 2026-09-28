@@ -133,11 +133,6 @@ export function reduceState(previous: State, input: Action, now = Date.now()): S
               completedAt: undefined,
               snoozedUntil: undefined,
             };
-          case 'task':
-            return {
-              ...o,
-              tasks: o.tasks.map((t) => (t.id === action.taskId ? { ...t, done: action.done } : t)),
-            };
           case 'note':
             return { ...o, notes: action.value };
         }

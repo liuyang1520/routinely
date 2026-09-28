@@ -11,15 +11,14 @@ export function historyCsv(state: State): string {
   const cell = (value: string) =>
     `"${(/^[=+@\-\t\r\n]/.test(value) ? "'" + value : value).replaceAll('"', '""')}"`;
   return [
-    ['Routine', 'Category', 'Scheduled at', 'Status', 'Completed at', 'Notes', 'Checklist'],
+    ['Routine', 'Label', 'Scheduled at', 'Status', 'Completed at', 'Notes'],
     ...state.occurrences.map((o) => [
       o.title,
-      o.category,
+      o.label,
       new Date(o.scheduledAt).toISOString(),
       o.status,
       o.completedAt ? new Date(o.completedAt).toISOString() : '',
       o.notes,
-      o.tasks.map((t) => `${t.done ? '[x]' : '[ ]'} ${t.title}`).join('; '),
     ]),
   ]
     .map((row) => row.map(cell).join(','))

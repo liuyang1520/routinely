@@ -86,21 +86,21 @@ test('create, edit, complete, export, and restore a routine in the real extensio
   await expect(
     page.getByRole('heading', { name: 'Good habits. A little at a time.' }),
   ).toBeVisible();
+  await expect(page.locator('.today-aside')).toHaveCount(0);
+  await expect(page.locator('.page-footer')).toHaveCount(0);
   await page.getByRole('button', { name: 'New routine N' }).click();
+  await expect(page.getByLabel('Routine name')).toBeEmpty();
+  await expect(page.getByLabel('Link to open')).toBeEmpty();
   await page.getByLabel('Routine name').fill('Read something good');
   await page.getByLabel('Link to open').fill('https://news.ycombinator.com');
+  await page.getByLabel('Label', { exact: false }).fill('Reading');
   await page.getByLabel('At what time?').fill('23:59');
-  await page.getByRole('button', { name: 'Add a step' }).click();
-  await page
-    .getByRole('textbox', { name: 'Step 1', exact: true })
-    .fill('Save one interesting idea');
   await page.getByRole('button', { name: 'Create routine', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(
     page.getByRole('heading', { name: 'Read something good', exact: true }).first(),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Show details for Read something good' }).click();
-  await page.getByLabel('Save one interesting idea').check();
   await page
     .getByLabel('Notes for Read something good')
     .fill('An interesting article about type systems.');
@@ -108,7 +108,6 @@ test('create, edit, complete, export, and restore a routine in the real extensio
   await expect(
     page.getByRole('button', { name: 'Undo completion of Read something good' }),
   ).toBeVisible();
-  await page.getByRole('textbox', { name: 'Scratchpad' }).fill('A thought to keep.');
   await page.getByRole('button', { name: 'My routines', exact: true }).click();
   await page.screenshot({ path: 'test-results/routines-search.png', animations: 'disabled' });
   await page.getByRole('button', { name: 'Edit Read something good' }).click();
@@ -122,12 +121,11 @@ test('create, edit, complete, export, and restore a routine in the real extensio
   await expect(page.getByRole('cell', { name: /Read something good/ })).toBeVisible();
   const state = await read();
   expect(state.routines).toHaveLength(1);
+  expect(state.routines[0]?.label).toBe('Reading');
   expect(state.routines[0]?.schedule.days).toEqual([1, 2, 3, 4, 5]);
-  expect(state.scratchpad).toBe('A thought to keep.');
   expect(state.occurrences[0]).toMatchObject({
     status: 'completed',
     notes: 'An interesting article about type systems.',
-    tasks: [{ done: true }],
   });
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export data', exact: true }).click();
@@ -190,6 +188,9 @@ test('the actual toolbar popup opens at a readable width', async () => {
 
 test('theme toggle in popover window synchronizes with the detailed page and vice versa', async () => {
   await seed(emptyState());
+  await worker.evaluate(async () => {
+    await (globalThis as any).chrome.storage.local.set({ 'routinely-theme': 'dark' });
+  });
   const dashPage = await dashboard();
   const popupPage = await context.newPage();
   await popupPage.setViewportSize({ width: 420, height: 600 });
@@ -206,15 +207,18 @@ test('theme toggle in popover window synchronizes with the detailed page and vic
 
   // Verify popup switched to light mode
   await expect(popupPage.locator('html')).toHaveAttribute('data-theme', 'light');
-  await expect(popupPage.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
+  await expect(popupPage.getByRole('button', { name: /Switch to system mode/ })).toBeVisible();
 
   // Verify detailed page (dashboard) automatically switched to light mode
   await expect(dashPage.locator('html')).toHaveAttribute('data-theme', 'light');
-  await expect(dashPage.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
+  await expect(dashPage.getByRole('button', { name: /Switch to system mode/ })).toBeVisible();
 
-  // Toggle theme back to dark mode in detailed page (dashboard)
-  const dashThemeButton = dashPage.getByRole('button', { name: 'Switch to dark mode' });
+  // Follow the device theme from the detailed page.
+  const dashThemeButton = dashPage.getByRole('button', { name: /Switch to system mode/ });
   await dashThemeButton.click();
+  await expect(dashPage.getByRole('button', { name: /Theme: system/ })).toBeVisible();
+  await expect(popupPage.getByRole('button', { name: /Theme: system/ })).toBeVisible();
+  await dashPage.getByRole('button', { name: /Switch to dark mode/ }).click();
 
   // Verify detailed page switched to dark mode
   await expect(dashPage.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -236,6 +240,72 @@ test('theme toggle in popover window synchronizes with the detailed page and vic
   expect(errors).toEqual([]);
 });
 
+test('preview and in-page reminders follow light, dark, and system modes', async () => {
+  await seed(emptyState());
+  await worker.evaluate(async () => {
+    await (globalThis as any).chrome.storage.local.set({ 'routinely-theme': 'light' });
+  });
+  const dashboardPage = await dashboard();
+  await dashboardPage.getByRole('button', { name: 'Settings', exact: true }).click();
+  await dashboardPage.getByRole('button', { name: 'Preview panel' }).click();
+  const preview = dashboardPage.getByRole('region', { name: 'Reminder preview' });
+  await expect(preview).toHaveAttribute('data-theme', 'light');
+  await expect(preview.locator('textarea')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await dashboardPage.getByRole('button', { name: 'Close preview' }).click();
+
+  const now = Date.now();
+  const state = emptyState(now);
+  state.settings.focusExistingTabs = false;
+  state.routines = [
+    {
+      id: 'theme-reminder',
+      title: 'Theme reminder',
+      label: '',
+      url: '',
+      notes: '',
+      enabled: true,
+      createdAt: now,
+      startAt: now,
+      schedule: { frequency: 'daily', time: '23:59', days: [1], monthDay: 1, interval: 1 },
+    },
+  ];
+  state.occurrences = [
+    {
+      id: 'theme-reminder',
+      routineId: 'theme-reminder',
+      title: 'Theme reminder',
+      label: '',
+      url: '',
+      scheduledAt: now,
+      status: 'pending',
+      notes: '',
+    },
+  ];
+  await seed(state);
+  const page = await context.newPage();
+  await page.goto(url);
+  await page.bringToFront();
+  const reminder = page.getByRole('region', { name: 'Routinely reminder' });
+  await expect(reminder).toHaveAttribute('data-theme', 'light');
+  await expect(reminder).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.97)');
+  await worker.evaluate(async () => {
+    await (globalThis as any).chrome.storage.local.set({ 'routinely-theme': 'dark' });
+  });
+  await expect(reminder).toHaveAttribute('data-theme', 'dark');
+  await expect(reminder).toHaveCSS('background-color', 'rgba(10, 10, 12, 0.96)');
+  await worker.evaluate(async () => {
+    await (globalThis as any).chrome.storage.local.set({ 'routinely-theme': 'system' });
+  });
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(reminder).toHaveAttribute('data-theme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(reminder).toHaveAttribute('data-theme', 'dark');
+
+  await page.close();
+  await dashboardPage.close();
+  expect(errors).toEqual([]);
+});
+
 test('alarms open the target page and keep its reminder there; snooze, notes, and completion persist', async () => {
   await seed(emptyState());
   const second = await context.newPage();
@@ -251,9 +321,8 @@ test('alarms open the target page and keep its reminder there; snooze, notes, an
         id: 'alarm-test',
         title: 'Alarm test routine',
         url: `${url}/article`,
-        category: 'Learning',
+        label: 'Learning',
         notes: 'A small note.',
-        tasks: [{ id: 'step', title: 'Read a little' }],
         schedule: { frequency: 'daily', time, days: [1], monthDay: 1, interval: 1 },
         enabled: true,
         startAt: date.getTime() - 60000,
@@ -267,7 +336,6 @@ test('alarms open the target page and keep its reminder there; snooze, notes, an
   const first = context.pages().find((page) => page.url() === `${url}/article`)!;
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
   await expect(first.getByRole('heading', { name: 'Alarm test routine' })).toBeVisible();
-  await first.getByLabel('Read a little').check();
   await first.getByLabel('Notes for Alarm test routine').fill('A note from the floating panel.');
   await first.getByRole('button', { name: '10 min', exact: true }).click();
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
@@ -283,7 +351,6 @@ test('alarms open the target page and keep its reminder there; snooze, notes, an
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
   await first.bringToFront();
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
-  await expect(first.getByLabel('Read a little')).toBeChecked();
   expect(await first.evaluate(() => getComputedStyle(document.body).fontSize)).toBe('18px');
   // Same-document navigation must also retire the panel without a page reload.
   await first.evaluate(() => history.pushState({}, '', '/different-article'));
@@ -300,7 +367,6 @@ test('alarms open the target page and keep its reminder there; snooze, notes, an
   state = await read();
   expect(state.occurrences[0]).toMatchObject({
     status: 'completed',
-    tasks: [{ done: true }],
     notes: 'A note from the floating panel.',
   });
   const page = await dashboard();
@@ -327,9 +393,8 @@ test('panels only paginate reminders for their exact URL when automatic switchin
     id: `scoped-${index}`,
     title: `Scoped routine ${index}`,
     url: address,
-    category: 'Learning',
+    label: 'Learning',
     notes: '',
-    tasks: [],
     schedule: { frequency: 'daily', time: '23:59', days: [1], monthDay: 1, interval: 1 },
     enabled: true,
     startAt: now,
@@ -340,11 +405,10 @@ test('panels only paginate reminders for their exact URL when automatic switchin
     routineId: routine.id,
     title: routine.title,
     url: routine.url,
-    category: routine.category,
+    label: routine.label,
     scheduledAt: now,
     status: 'pending',
     notes: '',
-    tasks: [],
   }));
   await seed(state);
   await first.bringToFront();
@@ -647,9 +711,8 @@ test('a due routine switches to its existing tab and window only once', async ()
         id: 'focus-test',
         title: 'Focus an existing tab',
         url: `${url}/routine-existing`,
-        category: 'Learning',
+        label: 'Learning',
         notes: '',
-        tasks: [],
         schedule: { frequency: 'daily', time, days: [1], monthDay: 1, interval: 1 },
         enabled: true,
         startAt: date.getTime() - 60000,
@@ -739,9 +802,8 @@ test('a scheduled alarm appears without navigating or interacting with the page'
         id: 'scheduled-alarm',
         title: 'A scheduled check-in',
         url: '',
-        category: 'Personal',
+        label: 'Personal',
         notes: '',
-        tasks: [],
         enabled: true,
         createdAt: now,
         startAt: now,
@@ -783,10 +845,9 @@ test('reloading the extension retires reminders in already-open webpages without
       {
         id: 'reload-routine',
         title: 'Reload check',
-        category: 'Personal',
+        label: 'Personal',
         url: '',
         notes: '',
-        tasks: [],
         enabled: true,
         createdAt: now,
         startAt: now,
@@ -798,12 +859,11 @@ test('reloading the extension retires reminders in already-open webpages without
         id: 'reload-check',
         routineId: 'reload-routine',
         title: 'Reload check',
-        category: 'Personal',
+        label: 'Personal',
         url: '',
         scheduledAt: now,
         status: 'pending',
         notes: '',
-        tasks: [],
       },
     ],
   });

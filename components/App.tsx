@@ -4,7 +4,6 @@ import {
   ArrowRight,
   BarChart3,
   Bell,
-  Check,
   CheckCheck,
   ChevronLeft,
   ChevronRight,
@@ -13,6 +12,7 @@ import {
   ExternalLink,
   ListTodo,
   Moon,
+  Monitor,
   Pause,
   Pencil,
   Play,
@@ -26,15 +26,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../hooks/use-store';
 import { useTheme } from '../hooks/use-theme';
-import {
-  dayKey,
-  addDays,
-  forDay,
-  nextOccurrence,
-  scheduleLabel,
-  startOfDay,
-  timeLabel,
-} from '../lib/schedule';
+import { dayKey, addDays, forDay, scheduleLabel, startOfDay, timeLabel } from '../lib/schedule';
 import type { Routine } from '../lib/model';
 import { download } from '../lib/export';
 import { Brand } from './Brand';
@@ -42,7 +34,7 @@ import { Button } from './ui/button';
 import { Confirm, Modal } from './ui/dialog';
 import { CustomSelect } from './ui/select';
 import { RoutineForm, type Template } from './RoutineForm';
-import { CategoryIcon, OccurrenceCard } from './OccurrenceCard';
+import { RoutineIcon, OccurrenceCard } from './OccurrenceCard';
 import { Activity } from './Activity';
 import { Settings } from './Settings';
 import { ReminderPreview } from './ReminderPanel';
@@ -54,21 +46,21 @@ const templates: Template[] = [
   {
     title: 'Catch up on Hacker News',
     url: 'https://news.ycombinator.com',
-    category: 'Learning',
+    label: 'Learning',
     time: '21:00',
     notes: 'A few interesting ideas to end the day.',
   },
   {
     title: 'Take a screen break',
     url: '',
-    category: 'Wellbeing',
+    label: 'Wellbeing',
     time: '14:00',
     notes: 'Stand up, stretch, and look into the distance.',
   },
   {
     title: 'Plan a little for tomorrow',
     url: '',
-    category: 'Personal',
+    label: 'Personal',
     time: '20:30',
     notes: 'What is one thing that would make tomorrow a good day?',
   },
@@ -78,14 +70,12 @@ export function App() {
   const [page, setPage] = useState<Page>('today');
   const [date, setDate] = useState(startOfDay(Date.now()));
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('All routines');
+  const [filterLabel, setFilterLabel] = useState('');
   const [form, setForm] = useState<{ routine?: Routine; template?: Template }>();
   const [remove, setRemove] = useState<Routine>();
   const [preview, setPreview] = useState(false);
   const [help, setHelp] = useState(false);
-  const [note, setNote] = useState<string>();
-  const [saved, setSaved] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, toggleTheme } = useTheme();
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (
@@ -115,11 +105,13 @@ export function App() {
         {error && <Button onClick={() => location.reload()}>Try again</Button>}
       </div>
     );
+  const labels = [...new Set(state.routines.map((r) => r.label).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b),
+  );
   const today = forDay(state, new Date());
-  const doneToday = today.filter((o) => o.status === 'completed').length;
   const items = forDay(state, date).filter(
     (o) =>
-      (category === 'All routines' || o.category === category) &&
+      (!filterLabel || o.label === filterLabel) &&
       o.title.toLowerCase().includes(search.toLowerCase()),
   );
   const remaining = items.filter((o) => o.status === 'pending');
@@ -127,25 +119,18 @@ export function App() {
   const weekStart = addDays(date, -((date.getDay() + 6) % 7));
   const week = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const active = state.routines.filter((r) => r.enabled);
-  const next = active
-    .flatMap((r) => {
-      const o = nextOccurrence(r);
-      return o ? [o] : [];
-    })
-    .sort((a, b) => a.scheduledAt - b.scheduledAt)[0];
   const isToday = dayKey(date) === dayKey(Date.now());
-  const progress = today.length ? Math.round((doneToday / today.length) * 100) : 0;
   const filteredRoutines = state.routines
     .filter(
       (r) =>
         r.title.toLowerCase().includes(search.toLowerCase()) &&
-        (category === 'All routines' || r.category === category),
+        (!filterLabel || r.label === filterLabel),
     )
     .sort((a, b) => a.schedule.time.localeCompare(b.schedule.time));
   const changePage = (value: Page) => {
     setPage(value);
     setSearch('');
-    setCategory('All routines');
+    setFilterLabel('');
   };
   return (
     <div className="app-shell">
@@ -238,10 +223,17 @@ export function App() {
             <Button
               variant="ghost"
               size="icon"
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              aria-label={`Theme: ${theme}. Switch to ${theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark'} mode`}
+              title={`Theme: ${theme}`}
+              onClick={toggleTheme}
             >
-              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+              {theme === 'system' ? (
+                <Monitor size={17} />
+              ) : theme === 'dark' ? (
+                <Sun size={17} />
+              ) : (
+                <Moon size={17} />
+              )}
             </Button>
             <Button
               variant="ghost"
@@ -267,7 +259,13 @@ export function App() {
           ) : page === 'later' ? (
             <Later state={state} act={act} />
           ) : page === 'settings' ? (
-            <Settings state={state} act={act} onPreview={() => setPreview(true)} />
+            <Settings
+              state={state}
+              act={act}
+              onPreview={() => setPreview(true)}
+              theme={theme}
+              setTheme={setTheme}
+            />
           ) : (
             <>
               <div className="page-heading">
@@ -359,13 +357,13 @@ export function App() {
                     </section>
                     <div className="routine-toolbar">
                       <div className="filter-tabs">
-                        {['All routines', 'Personal', 'Learning', 'Wellbeing', 'Work'].map((c) => (
+                        {['', ...labels].map((c) => (
                           <button
-                            key={c}
-                            className={category === c ? 'selected' : ''}
-                            onClick={() => setCategory(c)}
+                            key={c || 'all'}
+                            className={filterLabel === c ? 'selected' : ''}
+                            onClick={() => setFilterLabel(c)}
                           >
-                            {c}
+                            {c || 'All routines'}
                           </button>
                         ))}
                       </div>
@@ -456,10 +454,10 @@ export function App() {
                             className="starter-card"
                             onClick={() => setForm({ template: t })}
                           >
-                            <CategoryIcon category={t.category} />
+                            <RoutineIcon />
                             <strong>{t.title}</strong>
                             <span>
-                              {t.category} · {timeLabel(t.time)}
+                              {t.label} · {timeLabel(t.time)}
                             </span>
                             <ArrowRight size={15} />
                           </button>
@@ -467,98 +465,6 @@ export function App() {
                       </div>
                     </div>
                   </div>
-                  <aside className="today-aside">
-                    <section className="progress-card">
-                      <div className="section-title">
-                        <h2>One day at a time</h2>
-                        <Sun size={17} />
-                      </div>
-                      <div
-                        className="progress-ring"
-                        style={{ '--progress': `${progress}%` } as React.CSSProperties}
-                      >
-                        <div>
-                          <strong>
-                            {doneToday}
-                            <span>/{today.length}</span>
-                          </strong>
-                          <span>routines complete</span>
-                        </div>
-                      </div>
-                      <h3>
-                        {today.length && doneToday === today.length
-                          ? 'Look at you showing up.'
-                          : doneToday
-                            ? 'You’re making room for good.'
-                            : 'Small steps. Real progress.'}
-                      </h3>
-                      <p>
-                        {today.length
-                          ? `${progress}% of today’s intentions, thoughtfully kept.`
-                          : 'Your first check-in is the start of something.'}
-                      </p>
-                      <div className="progress-footer">
-                        <span>
-                          <i /> {active.length} active routines
-                        </span>
-                        <button onClick={() => changePage('activity')}>
-                          Your activity
-                          <ArrowRight size={13} />
-                        </button>
-                      </div>
-                    </section>
-                    <section className="scratchpad">
-                      <div className="section-title">
-                        <h2>A thought for later</h2>
-                        <Pencil size={14} />
-                      </div>
-                      <textarea
-                        aria-label="Scratchpad"
-                        maxLength={20000}
-                        placeholder="An idea, a little reminder, a moment worth remembering…"
-                        value={note ?? state.scratchpad}
-                        onChange={(e) => {
-                          setNote(e.target.value);
-                          setSaved(false);
-                        }}
-                        onBlur={() => {
-                          if (note !== undefined && note !== state.scratchpad)
-                            void act({ type: 'scratchpad', value: note }).then((ok) => {
-                              setSaved(ok);
-                              if (ok)
-                                setNote((current) => (current === note ? undefined : current));
-                            });
-                        }}
-                      />
-                      <div className="scratchpad-footer">
-                        <span>
-                          {saved ? (
-                            <>
-                              <Check size={12} />
-                              Saved
-                            </>
-                          ) : (
-                            'Auto-save active'
-                          )}
-                        </span>
-                      </div>
-                    </section>
-                    <section className="next-up">
-                      <div>
-                        <Clock3 size={16} />
-                        <span>NEXT LITTLE THING</span>
-                      </div>
-                      <h3>{next?.title ?? 'Something to look forward to'}</h3>
-                      <p>
-                        {next
-                          ? `${dayKey(next.scheduledAt) === dayKey(Date.now()) ? 'Today' : new Date(next.scheduledAt).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} at ${timeLabel(next.scheduledAt)}`
-                          : 'Add a routine and we’ll keep an eye on the time.'}
-                      </p>
-                      <button onClick={() => setPreview(true)}>
-                        Meet your gentle reminder <ArrowRight size={14} />
-                      </button>
-                    </section>
-                  </aside>
                 </div>
               )}
               {page === 'routines' && (
@@ -574,10 +480,13 @@ export function App() {
                       />
                     </label>
                     <CustomSelect
-                      aria-label="Filter routines by category"
-                      value={category}
-                      onChange={(val) => setCategory(val)}
-                      options={['All routines', 'Personal', 'Learning', 'Wellbeing', 'Work']}
+                      aria-label="Filter routines by label"
+                      value={filterLabel}
+                      onChange={setFilterLabel}
+                      options={[
+                        { value: '', label: 'All routines' },
+                        ...labels.map((label) => ({ value: label, label })),
+                      ]}
                     />
                     <span className="muted">
                       {active.length} active · {state.routines.length - active.length} paused
@@ -589,7 +498,7 @@ export function App() {
                         key={r.id}
                         className={`managed-routine ${!r.enabled ? 'paused' : ''}`}
                       >
-                        <CategoryIcon category={r.category} />
+                        <RoutineIcon />
                         <div className="managed-routine-copy">
                           <h2>
                             {r.title}
@@ -599,8 +508,12 @@ export function App() {
                             {scheduleLabel(r.schedule)}
                             <span>·</span>
                             {timeLabel(r.schedule.time)}
-                            <span>·</span>
-                            {r.category}
+                            {r.label && (
+                              <>
+                                <span>·</span>
+                                {r.label}
+                              </>
+                            )}
                           </p>
                           {r.url && (
                             <PageLink href={r.url} target="_blank" rel="noopener noreferrer">
@@ -648,7 +561,7 @@ export function App() {
                       </h2>
                       <p>
                         {state.routines.length
-                          ? 'Try a different search or category.'
+                          ? 'Try a different search or label.'
                           : 'Add your first routine and make a little room for what matters.'}
                       </p>
                       <Button onClick={() => setForm({})}>
@@ -661,10 +574,6 @@ export function App() {
               )}
             </>
           )}
-          <footer className="page-footer">
-            <span className="footer-brand">ROUTINELY</span>
-            <span className="footer-system">GLASSMORPHISM SYSTEM · EMERALD</span>
-          </footer>
         </main>
       </div>
       {form && (
@@ -689,7 +598,11 @@ export function App() {
         }}
       />
       {preview && (
-        <ReminderPreview position={state.settings.position} onClose={() => setPreview(false)} />
+        <ReminderPreview
+          position={state.settings.position}
+          onClose={() => setPreview(false)}
+          theme={theme}
+        />
       )}
       <Modal
         open={help}
@@ -700,14 +613,15 @@ export function App() {
         <div className="help-content">
           <h3>Start with a routine</h3>
           <p>
-            Choose a title, an optional link, and a schedule. Press N anywhere on the dashboard to
-            create one. New schedules begin from the time you save them.
+            Choose a title, an optional link and label, and a schedule. Press N anywhere on the
+            dashboard to create one. New schedules begin from the time you save them.
           </p>
           <h3>Show up in your own way</h3>
           <p>
-            When it’s time, a reminder appears on your active webpage. Open the link, work through
-            your steps, leave a note, or snooze for 10 minutes. Opening a link doesn’t mark a
-            routine complete.
+            When it’s time, a reminder appears on your active webpage. Open the link, leave a note,
+            complete the check-in, or snooze for 10 minutes. Manually opening a link doesn’t mark a
+            routine complete. When Routinely opens a due page for you, it completes the check-in
+            after a short delay if you stay there.
           </p>
           <h3>Keep a little perspective</h3>
           <p>

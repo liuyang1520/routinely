@@ -1,4 +1,16 @@
-export type Theme = 'dark' | 'light';
+export type Theme = 'dark' | 'light' | 'system';
+
+export function isTheme(value: unknown): value is Theme {
+  return value === 'dark' || value === 'light' || value === 'system';
+}
+
+export function resolvedTheme(theme: Theme): 'dark' | 'light' {
+  if (theme !== 'system') return theme;
+  return typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
+}
 
 export const THEME_KEY = 'routinely-theme';
 export const THEME_SYNC_CHANNEL = 'routinely-theme-sync';
@@ -18,22 +30,23 @@ export function getStoredTheme(): Theme {
   if (typeof window !== 'undefined') {
     try {
       const stored = localStorage.getItem(THEME_KEY);
-      if (stored === 'light' || stored === 'dark') {
+      if (isTheme(stored)) {
         return stored;
       }
     } catch {
       // Storage access may fail in sandboxed contexts
     }
   }
-  return 'dark';
+  return 'system';
 }
 
 export function applyThemeToDocument(theme: Theme) {
   if (typeof document === 'undefined') return;
-  document.documentElement.setAttribute('data-theme', theme);
-  document.documentElement.classList.toggle('dark', theme === 'dark');
-  document.documentElement.classList.toggle('light', theme === 'light');
-  document.documentElement.style.colorScheme = theme;
+  const resolved = resolvedTheme(theme);
+  document.documentElement.setAttribute('data-theme', resolved);
+  document.documentElement.classList.toggle('dark', resolved === 'dark');
+  document.documentElement.classList.toggle('light', resolved === 'light');
+  document.documentElement.style.colorScheme = resolved;
 }
 
 export function initTheme(): Theme {
@@ -62,7 +75,7 @@ export async function readExtensionTheme(): Promise<Theme | undefined> {
       if (browser?.storage?.local) {
         const data = await browser.storage.local.get(THEME_KEY);
         const val = data?.[THEME_KEY];
-        if (val === 'light' || val === 'dark') {
+        if (isTheme(val)) {
           return val;
         }
       }
@@ -119,7 +132,7 @@ export function subscribeTheme(callback: (theme: Theme) => void): () => void {
           const listener = (changes: Record<string, { newValue?: unknown }>) => {
             if (THEME_KEY in changes) {
               const val = changes[THEME_KEY]?.newValue;
-              if (val === 'light' || val === 'dark') {
+              if (isTheme(val)) {
                 callback(val);
               }
             }
@@ -135,7 +148,7 @@ export function subscribeTheme(callback: (theme: Theme) => void): () => void {
   const channel = getBroadcastChannel();
   const onMessage = (event: MessageEvent) => {
     if (disposed) return;
-    if (event.data === 'light' || event.data === 'dark') {
+    if (isTheme(event.data)) {
       callback(event.data);
     }
   };
@@ -144,7 +157,7 @@ export function subscribeTheme(callback: (theme: Theme) => void): () => void {
   // 3. Window storage event (for other windows on the same origin using localStorage)
   const onStorage = (event: StorageEvent) => {
     if (disposed) return;
-    if (event.key === THEME_KEY && (event.newValue === 'light' || event.newValue === 'dark')) {
+    if (event.key === THEME_KEY && isTheme(event.newValue)) {
       callback(event.newValue);
     }
   };
@@ -156,7 +169,7 @@ export function subscribeTheme(callback: (theme: Theme) => void): () => void {
   const onCustom = (event: Event) => {
     if (disposed) return;
     const detail = (event as CustomEvent<Theme>).detail;
-    if (detail === 'light' || detail === 'dark') {
+    if (isTheme(detail)) {
       callback(detail);
     }
   };

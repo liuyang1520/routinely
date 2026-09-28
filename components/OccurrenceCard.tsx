@@ -6,11 +6,7 @@ import {
   SkipForward,
   Clock3,
   Undo2,
-  ListChecks,
   StickyNote,
-  BookOpen,
-  Heart,
-  Briefcase,
   Sparkles,
 } from 'lucide-react';
 import type { Action, Occurrence } from '../lib/model';
@@ -18,17 +14,10 @@ import { timeLabel } from '../lib/schedule';
 import { Button } from './ui/button';
 import { PageLink } from './PageLink';
 
-export const categoryIcons = {
-  Personal: Sparkles,
-  Learning: BookOpen,
-  Wellbeing: Heart,
-  Work: Briefcase,
-};
-export function CategoryIcon({ category }: { category: Occurrence['category'] }) {
-  const Icon = categoryIcons[category];
+export function RoutineIcon() {
   return (
-    <span className={`category-icon category-${category.toLowerCase()}`}>
-      <Icon size={20} />
+    <span className="routine-icon">
+      <Sparkles size={20} />
     </span>
   );
 }
@@ -48,7 +37,6 @@ export function OccurrenceCard({
   const [expanded, setExpanded] = useState(compact);
   const [note, setNote] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState<Record<string, boolean>>({});
   const completed = item.status === 'completed';
   const due = item.status === 'pending' && item.scheduledAt <= Date.now();
   const snoozed = !!item.snoozedUntil && item.snoozedUntil > Date.now();
@@ -56,15 +44,6 @@ export function OccurrenceCard({
     setBusy(true);
     await act(action);
     setBusy(false);
-  };
-  const toggleTask = async (taskId: string, done: boolean) => {
-    setPendingTasks((current) => ({ ...current, [taskId]: done }));
-    await perform({ type: 'task', id: item.id, taskId, done });
-    setPendingTasks((current) => {
-      const next = { ...current };
-      delete next[taskId];
-      return next;
-    });
   };
   return (
     <article
@@ -79,22 +58,17 @@ export function OccurrenceCard({
         >
           {completed && <Check size={15} />}
         </button>
-        {!compact && <CategoryIcon category={item.category} />}
+        {!compact && <RoutineIcon />}
         <div className="occurrence-copy">
           <h3>{item.title}</h3>
           <div className="routine-meta">
-            <span>{item.category}</span>
-            <span className="meta-dot">·</span>
-            <span>{timeLabel(item.scheduledAt)}</span>
-            {item.tasks.length > 0 && (
+            {item.label && (
               <>
+                <span>{item.label}</span>
                 <span className="meta-dot">·</span>
-                <span>
-                  <ListChecks size={12} />
-                  {item.tasks.filter((t) => t.done).length}/{item.tasks.length}
-                </span>
               </>
             )}
+            <span>{timeLabel(item.scheduledAt)}</span>
           </div>
         </div>
         {!compact && (
@@ -140,24 +114,6 @@ export function OccurrenceCard({
       </div>
       {!minimal && expanded && (
         <div className="occurrence-details">
-          {item.tasks.length > 0 && (
-            <div className="checklist">
-              {item.tasks.map((task) => (
-                <label
-                  key={task.id}
-                  className={(pendingTasks[task.id] ?? task.done) ? 'task-done' : ''}
-                >
-                  <input
-                    type="checkbox"
-                    checked={pendingTasks[task.id] ?? task.done}
-                    disabled={readOnly || busy}
-                    onChange={(e) => void toggleTask(task.id, e.target.checked)}
-                  />
-                  <span>{task.title}</span>
-                </label>
-              ))}
-            </div>
-          )}
           <label className="occurrence-note">
             <span>
               <StickyNote size={13} /> Notes for this check-in

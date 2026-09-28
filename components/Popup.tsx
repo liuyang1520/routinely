@@ -5,6 +5,7 @@ import {
   ExternalLink,
   ListTodo,
   Moon,
+  Monitor,
   Pause,
   Pencil,
   Play,
@@ -19,7 +20,7 @@ import { openDashboard } from '../lib/client';
 import type { Routine } from '../lib/model';
 import { Brand } from './Brand';
 import { Button } from './ui/button';
-import { CategoryIcon, OccurrenceCard } from './OccurrenceCard';
+import { RoutineIcon, OccurrenceCard } from './OccurrenceCard';
 import { QuickDelay } from './QuickDelay';
 import { RoutineForm, type Template } from './RoutineForm';
 import { PageLink } from './PageLink';
@@ -28,7 +29,7 @@ type PopoverView = 'today' | 'daily' | 'weekly' | 'all';
 
 export function Popup() {
   const { state, act, error } = useStore();
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const [view, setView] = useState<PopoverView>('today');
   const [form, setForm] = useState<{ routine?: Routine; template?: Template }>();
 
@@ -58,10 +59,17 @@ export function Popup() {
           <Button
             size="icon"
             variant="ghost"
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label={`Theme: ${theme}. Switch to ${theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark'} mode`}
+            title={`Theme: ${theme}`}
+            onClick={toggleTheme}
           >
-            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+            {theme === 'system' ? (
+              <Monitor size={17} />
+            ) : theme === 'dark' ? (
+              <Sun size={17} />
+            ) : (
+              <Moon size={17} />
+            )}
           </Button>
           <Button
             size="icon"
@@ -79,7 +87,7 @@ export function Popup() {
           setForm({
             template: {
               ...tmpl,
-              category: 'Personal',
+              label: '',
               time: '21:00',
               notes: '',
             },
@@ -190,7 +198,7 @@ export function Popup() {
               }
               return (
                 <article key={r.id} className={`managed-routine ${!r.enabled ? 'paused' : ''}`}>
-                  <CategoryIcon category={r.category} />
+                  <RoutineIcon />
                   <div className="managed-routine-copy">
                     <h3>
                       {r.title}
@@ -246,7 +254,7 @@ export function Popup() {
               }
               return (
                 <article key={r.id} className={`managed-routine ${!r.enabled ? 'paused' : ''}`}>
-                  <CategoryIcon category={r.category} />
+                  <RoutineIcon />
                   <div className="managed-routine-copy">
                     <h3>
                       {r.title}
@@ -302,7 +310,7 @@ export function Popup() {
               }
               return (
                 <article key={r.id} className={`managed-routine ${!r.enabled ? 'paused' : ''}`}>
-                  <CategoryIcon category={r.category} />
+                  <RoutineIcon />
                   <div className="managed-routine-copy">
                     <h3>
                       {r.title}

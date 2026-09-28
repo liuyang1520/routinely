@@ -82,7 +82,7 @@ export function Later({ state, act }: { state: State; act: (action: Action) => P
           <div className="later-list">
             {scheduled.map((item) => (
               <article className="later-card" key={item.id}>
-                <span className="category-icon">
+                <span className="routine-icon">
                   <Clock3 size={19} />
                 </span>
                 <div className="later-copy">

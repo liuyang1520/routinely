@@ -170,9 +170,7 @@ export default defineBackground(() => {
         const item = items[0]!;
         try {
           const result = await openOrFocusTab(item.url);
-          if (item.tasks.length === 0) {
-            scheduleAutoCheck(item.id, result.tabId);
-          }
+          scheduleAutoCheck(item.id, result.tabId);
         } catch {
           // Let the next tick retry if the destination could not be opened.
           state = {
