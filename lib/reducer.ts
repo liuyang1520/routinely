@@ -1,5 +1,5 @@
 import { actionSchema, type Action, type State } from './model';
-import { forDay, reconcile } from './schedule';
+import { dayKey, forDay, reconcile } from './schedule';
 import { pruneHistory } from './retention';
 
 export function reduceState(previous: State, input: Action, now = Date.now()): State {
@@ -97,8 +97,25 @@ export function reduceState(previous: State, input: Action, now = Date.now()): S
         ...state,
         routines: state.routines.map((r) =>
           r.id === action.id
-            ? { ...r, enabled: !r.enabled, startAt: !r.enabled ? now : r.startAt }
+            ? {
+                ...r,
+                enabled: !r.enabled,
+                pausedUntil: undefined,
+                startAt: !r.enabled ? now : r.startAt,
+              }
             : r,
+        ),
+        occurrences: state.occurrences.map((o) =>
+          o.routineId === action.id && o.status === 'pending' ? { ...o, status: 'skipped' } : o,
+        ),
+      };
+    case 'pause-routine':
+      if (action.until !== undefined && action.until <= now)
+        throw new Error('Choose a future date to resume this routine.');
+      return {
+        ...state,
+        routines: state.routines.map((r) =>
+          r.id === action.id ? { ...r, enabled: false, pausedUntil: action.until } : r,
         ),
         occurrences: state.occurrences.map((o) =>
           o.routineId === action.id && o.status === 'pending' ? { ...o, status: 'skipped' } : o,
@@ -130,6 +147,15 @@ export function reduceState(previous: State, input: Action, now = Date.now()): S
               completedAt: undefined,
               snoozedUntil: now + 10 * 60000,
             };
+          case 'postpone':
+            if (
+              o.status !== 'pending' ||
+              o.scheduledAt > now ||
+              action.until <= now ||
+              dayKey(action.until) !== dayKey(now)
+            )
+              throw new Error('Choose a later time today for this check-in.');
+            return { ...o, snoozedUntil: action.until };
           case 'undo':
             return {
               ...o,

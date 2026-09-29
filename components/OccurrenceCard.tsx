@@ -10,7 +10,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { Action, Occurrence } from '../lib/model';
-import { timeLabel } from '../lib/schedule';
+import { laterTodayAt, timeLabel } from '../lib/schedule';
 import { Button } from './ui/button';
 import { PageLink } from './PageLink';
 
@@ -40,6 +40,7 @@ export function OccurrenceCard({
   const completed = item.status === 'completed';
   const due = item.status === 'pending' && item.scheduledAt <= Date.now();
   const snoozed = !!item.snoozedUntil && item.snoozedUntil > Date.now();
+  const laterToday = due ? laterTodayAt() : undefined;
   const perform = async (action: Action) => {
     setBusy(true);
     await act(action);
@@ -149,6 +150,20 @@ export function OccurrenceCard({
                     <Clock3 />
                     10 min
                   </Button>
+                  {laterToday && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        const until = laterTodayAt();
+                        if (until) void perform({ type: 'postpone', id: item.id, until });
+                      }}
+                    >
+                      <Clock3 />
+                      Later today
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"

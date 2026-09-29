@@ -61,7 +61,7 @@ describe('one-off delayed views', () => {
     const migrated = parseBackup(JSON.stringify(legacy));
     expect(migrated.scratchpad).toBe('Keep this');
     expect(migrated.delayedViews).toEqual([]);
-    expect(migrated.settings.focusExistingTabs).toBe(true);
+    expect(migrated.settings.focusExistingTabs).toBe(false);
   });
 });
 describe('tab URL matching', () => {

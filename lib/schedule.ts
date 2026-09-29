@@ -62,9 +62,14 @@ export function nextOccurrence(routine: Routine, now = Date.now()): Occurrence |
   }
 }
 export function reconcile(state: State, now = Date.now()): State {
+  const routines = state.routines.map((routine) =>
+    !routine.enabled && routine.pausedUntil !== undefined && routine.pausedUntil <= now
+      ? { ...routine, enabled: true, startAt: routine.pausedUntil, pausedUntil: undefined }
+      : routine,
+  );
   const occurrences = [...state.occurrences];
   const ids = new Set(occurrences.map((o) => o.id));
-  for (const routine of state.routines) {
+  for (const routine of routines) {
     if (!routine.enabled) continue;
     // Calendar arithmetic, not 24h offsets, keeps recurrence stable through DST.
     for (
@@ -81,6 +86,7 @@ export function reconcile(state: State, now = Date.now()): State {
   }
   return {
     ...state,
+    routines,
     lastTick: now,
     occurrences: occurrences.map((o) =>
       o.status === 'pending' &&
@@ -90,6 +96,13 @@ export function reconcile(state: State, now = Date.now()): State {
         : o,
     ),
   };
+}
+
+export function laterTodayAt(now = Date.now()): number | undefined {
+  const evening = new Date(now);
+  evening.setHours(18, 0, 0, 0);
+  const target = Math.max(now + 60 * 60000, evening.getTime());
+  return dayKey(target) === dayKey(now) ? target : undefined;
 }
 export const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export function scheduleLabel(s: Schedule): string {
@@ -115,5 +128,3 @@ export function dueItems(state: State, now = Date.now()): Occurrence[] {
     )
     .sort((a, b) => a.scheduledAt - b.scheduledAt);
 }
-
-export const AUTO_CHECK_DELAY_MS = 3000;

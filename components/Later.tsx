@@ -5,6 +5,7 @@ import {
   Check,
   Clock3,
   Plus,
+  Repeat2,
   RotateCcw,
   Trash2,
   X,
@@ -17,7 +18,15 @@ import { Button } from './ui/button';
 import { Modal } from './ui/dialog';
 import { DelayChoices } from './DelayChoices';
 
-export function Later({ state, act }: { state: State; act: (action: Action) => Promise<boolean> }) {
+export function Later({
+  state,
+  act,
+  onMakeRoutine,
+}: {
+  state: State;
+  act: (action: Action) => Promise<boolean>;
+  onMakeRoutine: (item: DelayedView) => void;
+}) {
   const [editor, setEditor] = useState<{ item?: DelayedView; title: string; url: string }>();
   const [error, setError] = useState('');
   const scheduled = state.delayedViews
@@ -148,6 +157,12 @@ export function Later({ state, act }: { state: State; act: (action: Action) => P
                   })}
                 </p>
               </div>
+              {item.status === 'opened' && (
+                <Button variant="ghost" size="sm" onClick={() => onMakeRoutine(item)}>
+                  <Repeat2 />
+                  Make routine
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"

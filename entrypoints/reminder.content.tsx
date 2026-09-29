@@ -37,6 +37,7 @@ export default defineContentScript({
       let panelVisible = false;
       let notice: NavigationNotice | undefined;
       const seenNotices = new Set<string>();
+      const dismissedReminders = new Set<string>();
       const dismissNotice = () => {
         notice = undefined;
         render();
@@ -48,9 +49,12 @@ export default defineContentScript({
           return;
         }
         if (notice && notice.expiresAt <= Date.now()) notice = undefined;
-        const currentState = state;
+        const currentState = state && {
+          ...state,
+          occurrences: state.occurrences.filter((item) => !dismissedReminders.has(item.id)),
+        };
         const panel =
-          currentState && panelVisible ? (
+          currentState && panelVisible && dueItems(currentState).length > 0 ? (
             <ReminderPanel
               state={currentState}
               colorMode={resolvedTheme(theme)}
@@ -68,10 +72,8 @@ export default defineContentScript({
               onClose={(id) => {
                 if (ctx.isInvalid) return;
                 const item = dueItems(currentState).find((o) => o.id === id);
-                if (item)
-                  void dispatch({ type: 'snooze', id: item.id }).catch(() => {
-                    void ctx.isInvalid;
-                  });
+                if (item) dismissedReminders.add(item.id);
+                render();
               }}
             />
           ) : null;

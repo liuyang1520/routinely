@@ -132,7 +132,7 @@ export function Settings({
           <div className="setting-row">
             <div>
               <label htmlFor="focus-existing">Open or switch to the routine’s page</label>
-              <p>When a routine is due, open or focus its tab and window once.</p>
+              <p>Off by default. Turn on to bring a linked routine into view when it is due.</p>
             </div>
             <Switch
               id="focus-existing"

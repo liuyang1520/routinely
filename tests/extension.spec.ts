@@ -88,6 +88,8 @@ test('create, edit, complete, export, and restore a routine in the real extensio
   ).toBeVisible();
   await expect(page.locator('.today-aside')).toHaveCount(0);
   await expect(page.locator('.page-footer')).toHaveCount(0);
+  await page.getByRole('button', { name: 'A note to keep handy' }).click();
+  await page.getByRole('textbox', { name: 'A note to keep handy' }).fill('Keep the week gentle.');
   await page.getByRole('button', { name: 'New routine N' }).click();
   await expect(page.getByLabel('Routine name')).toBeEmpty();
   await expect(page.getByLabel('Link to open')).toBeEmpty();
@@ -116,6 +118,15 @@ test('create, edit, complete, export, and restore a routine in the real extensio
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByText('Weekdays', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Pause Read something good' }).click();
+  await page.getByRole('button', { name: 'For one week' }).click();
+  await expect(page.getByText(/Resumes/)).toBeVisible();
+  expect((await read()).routines[0]?.pausedUntil).toBeGreaterThan(Date.now());
+  await page.getByRole('button', { name: 'Resume Read something good' }).click();
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'A note to keep handy' })).toHaveValue(
+    'Keep the week gentle.',
+  );
   await page.reload();
   await page.getByRole('button', { name: 'Activity', exact: true }).click();
   await expect(page.getByRole('cell', { name: /Read something good/ })).toBeVisible();
@@ -420,6 +431,7 @@ test('alarms open the target page and keep its reminder there; snooze, notes, an
   const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   await seed({
     ...emptyState(date.getTime() - 60000),
+    settings: { ...emptyState().settings, focusExistingTabs: true },
     routines: [
       {
         id: 'alarm-test',
@@ -460,6 +472,13 @@ test('alarms open the target page and keep its reminder there; snooze, notes, an
   await first.evaluate(() => history.pushState({}, '', '/different-article'));
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
   await first.evaluate(() => history.pushState({}, '', '/article'));
+  await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
+  await first.getByRole('button', { name: 'Dismiss this reminder' }).click();
+  await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
+  expect((await read()).occurrences[0]).toMatchObject({ status: 'pending' });
+  expect((await read()).occurrences[0]?.snoozedUntil).toBeLessThan(Date.now());
+  await first.reload();
+  await first.bringToFront();
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
   const countBefore = context.pages().length;
   await first.getByRole('link', { name: 'Open Alarm test routine' }).click();
@@ -553,11 +572,9 @@ test('the popup saves the current webpage and the later queue supports reschedul
   await popup.screenshot({ path: 'test-results/custom-date-picker.png', animations: 'disabled' });
   await popup.getByRole('button', { name: 'Custom', exact: true }).click();
 
-  // Test popover daily/weekly tabs
-  await popup.getByRole('tab', { name: 'Daily' }).click();
-  await expect(popup.getByText('Daily rhythms')).toBeVisible();
-  await popup.getByRole('tab', { name: 'Weekly' }).click();
-  await expect(popup.getByText('Weekly rhythms')).toBeVisible();
+  // The compact popup keeps today's check-ins and routine management separate.
+  await popup.getByRole('tab', { name: 'Routines' }).click();
+  await expect(popup.getByText('All routines')).toBeVisible();
   await popup.getByRole('tab', { name: 'Today' }).click();
   await expect(popup.getByText('0 of 0 completed')).toBeVisible();
 
@@ -733,6 +750,12 @@ test('delayed views focus an existing tab, reopen a closed page, and run only on
           .url,
     ),
   ).toContain('/dashboard.html');
+  await control.getByRole('button', { name: 'View later', exact: true }).click();
+  await control.getByRole('button', { name: 'Make routine' }).first().click();
+  await expect(control.getByLabel('Routine name')).toHaveValue('Delayed test page');
+  await expect(control.getByLabel('Link to open')).toHaveValue(`${url}/delayed-existing`);
+  await control.getByRole('button', { name: 'Create routine', exact: true }).click();
+  await expect.poll(async () => (await read()).routines[0]?.url).toBe(`${url}/delayed-existing`);
   expect(errors).toEqual([]);
   await reopened.close();
   await control.close();
@@ -810,6 +833,7 @@ test('a due routine switches to its existing tab and window only once', async ()
   const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   await seed({
     ...emptyState(date.getTime() - 60000),
+    settings: { ...emptyState().settings, focusExistingTabs: true },
     routines: [
       {
         id: 'focus-test',
@@ -868,9 +892,8 @@ test('a due routine switches to its existing tab and window only once', async ()
           .url,
     ),
   ).toContain('/dashboard.html');
-  await expect
-    .poll(async () => (await read()).occurrences[0]?.status, { timeout: 10000 })
-    .toBe('completed');
+  await page.waitForTimeout(3500);
+  expect((await read()).occurrences[0]?.status).toBe('pending');
   const countBefore = (await worker.evaluate(async () => (globalThis as any).chrome.tabs.query({})))
     .length;
   await page.getByRole('link', { name: 'Open Focus an existing tab', exact: true }).click();
@@ -887,6 +910,10 @@ test('a due routine switches to its existing tab and window only once', async ()
   expect(
     (await worker.evaluate(async () => (globalThis as any).chrome.tabs.query({}))).length,
   ).toBe(countBefore);
+  expect((await read()).occurrences[0]?.status).toBe('pending');
+  await target.bringToFront();
+  await target.getByRole('button', { name: 'Mark done' }).click();
+  await expect.poll(async () => (await read()).occurrences[0]?.status).toBe('completed');
   expect(errors).toEqual([]);
   await target.close();
   await page.close();

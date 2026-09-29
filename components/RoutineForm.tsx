@@ -49,6 +49,7 @@ export function RoutineForm({
       notes,
       schedule,
       enabled: routine?.enabled ?? true,
+      pausedUntil: routine?.pausedUntil,
       createdAt: routine?.createdAt ?? Date.now(),
       startAt: routine?.startAt ?? Date.now(),
     });

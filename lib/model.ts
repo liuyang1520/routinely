@@ -37,6 +37,7 @@ export const routineSchema = z.preprocess(
     notes: z.string().max(10000),
     schedule: scheduleSchema,
     enabled: z.boolean(),
+    pausedUntil: timestamp.optional(),
     createdAt: timestamp,
     startAt: timestamp,
   }),
@@ -59,7 +60,7 @@ export const occurrenceSchema = z.preprocess(
 );
 export const settingsSchema = z.object({
   reminders: z.boolean(),
-  focusExistingTabs: z.boolean().default(true),
+  focusExistingTabs: z.boolean().default(false),
   position: z.enum(['top-right', 'bottom-right', 'top-left', 'bottom-left']),
 });
 export const delayedViewSchema = z.object({
@@ -100,7 +101,7 @@ export const emptyState = (now = Date.now()): State => ({
   routines: [],
   occurrences: [],
   delayedViews: [],
-  settings: { reminders: true, position: 'top-right', focusExistingTabs: true },
+  settings: { reminders: true, position: 'top-right', focusExistingTabs: false },
   scratchpad: '',
   lastTick: now,
 });
@@ -108,9 +109,11 @@ export const actionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('save-routine'), routine: routineSchema }),
   z.object({ type: z.literal('delete-routine'), id: z.string() }),
   z.object({ type: z.literal('toggle-routine'), id: z.string() }),
+  z.object({ type: z.literal('pause-routine'), id: z.string(), until: timestamp.optional() }),
   z.object({ type: z.literal('complete'), id: z.string() }),
   z.object({ type: z.literal('skip'), id: z.string() }),
   z.object({ type: z.literal('snooze'), id: z.string() }),
+  z.object({ type: z.literal('postpone'), id: z.string(), until: timestamp }),
   z.object({ type: z.literal('undo'), id: z.string() }),
   z.object({ type: z.literal('note'), id: z.string(), value: z.string().max(10000) }),
   z.object({ type: z.literal('scratchpad'), value: z.string().max(20000) }),

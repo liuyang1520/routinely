@@ -5,10 +5,12 @@ import {
   dayKey,
   dueItems,
   forDay,
+  laterTodayAt,
   nextOccurrence,
   occurrenceOn,
   reconcile,
 } from '../lib/schedule';
+import { weeklyNote } from '../lib/insights';
 import { reduceState } from '../lib/reducer';
 import { historyCsv, parseBackup } from '../lib/export';
 
@@ -85,6 +87,9 @@ describe('local calendar scheduling', () => {
   });
 });
 describe('durable check-ins', () => {
+  it('keeps routine tab switching opt-in', () => {
+    expect(emptyState().settings.focusExistingTabs).toBe(false);
+  });
   it('catches up after downtime, expires old reminders, and deduplicates ticks', () => {
     const state = { ...emptyState(at('2026-03-01T20:00:00')), routines: [routine()] };
     const recovered = reconcile(state, at('2026-03-04T22:00:00'));
@@ -116,6 +121,23 @@ describe('durable check-ins', () => {
     expect(dueItems(state, now + 10 * 60000)[0]).toMatchObject({
       notes: 'Saved a story',
     });
+  });
+  it('moves only the current nudge to later today', () => {
+    const now = at('2026-03-02T21:00:00');
+    const until = laterTodayAt(now)!;
+    let state = reconcile({ ...emptyState(now), routines: [routine()] }, now);
+    const id = state.occurrences[0]!.id;
+    state = reduceState(state, { type: 'postpone', id, until }, now);
+    expect(dueItems(state, now)).toHaveLength(0);
+    expect(dueItems(state, until)).toHaveLength(1);
+    expect(nextOccurrence(state.routines[0]!, until)?.scheduledAt).toBe(at('2026-03-03T21:00:00'));
+    expect(() =>
+      reduceState(state, { type: 'postpone', id, until: at('2026-03-03T09:00:00') }, now),
+    ).toThrow('later time today');
+  });
+  it('offers later today only when enough time remains', () => {
+    expect(laterTodayAt(at('2026-03-02T09:00:00'))).toBe(at('2026-03-02T18:00:00'));
+    expect(laterTodayAt(at('2026-03-02T23:30:00'))).toBeUndefined();
   });
   it('preserves tabHandledAt across snooze so auto-focus is not repeated for the same occurrence', () => {
     const now = at('2026-03-02T21:00:00');
@@ -158,11 +180,36 @@ describe('durable check-ins', () => {
     expect(state.occurrences).toHaveLength(1);
     expect(dayKey(state.occurrences[0]!.scheduledAt)).toBe('2026-03-06');
   });
+  it('automatically resumes a dated pause without backfilling paused days', () => {
+    const now = at('2026-03-02T20:00:00');
+    const until = at('2026-03-05T00:00:00');
+    let state = { ...emptyState(now), routines: [routine()] };
+    state = reduceState(state, { type: 'pause-routine', id: 'news', until }, now);
+    expect(state.routines[0]).toMatchObject({ enabled: false, pausedUntil: until });
+    state = reconcile(state, at('2026-03-04T22:00:00'));
+    expect(state.occurrences).toHaveLength(0);
+    state = reconcile(state, at('2026-03-05T22:00:00'));
+    expect(state.routines[0]).toMatchObject({ enabled: true, startAt: until });
+    expect(state.occurrences.map((item) => dayKey(item.scheduledAt))).toEqual(['2026-03-05']);
+  });
   it('rejects future-day actions instead of creating fake check-ins', () => {
     const now = at('2026-03-02T10:00:00');
     const state = { ...emptyState(now), routines: [routine()] };
     const id = forDay(state, new Date('2026-03-03T10:00:00'))[0]!.id;
     expect(() => reduceState(state, { type: 'complete', id }, now)).toThrow('no longer available');
+  });
+});
+describe('gentle weekly reflection', () => {
+  it('shows a recent completed routine early in the week', () => {
+    const item = occurrenceOn(routine(), new Date('2026-09-23T12:00:00'))!;
+    const state = {
+      ...emptyState(),
+      occurrences: [{ ...item, status: 'completed' as const }],
+    };
+    expect(weeklyNote(state, at('2026-09-28T10:00:00'))).toBe(
+      'You made time for Read Hacker News 1 time last week.',
+    );
+    expect(weeklyNote(state, at('2026-10-04T10:00:00'))).toBeUndefined();
   });
 });
 describe('portable data', () => {

@@ -44,7 +44,7 @@ export function ReminderPanel({
           <Button
             variant="ghost"
             size="icon"
-            aria-label={preview ? 'Close preview' : 'Snooze this reminder for 10 minutes'}
+            aria-label={preview ? 'Close preview' : 'Dismiss this reminder'}
             onClick={() => onClose(item?.id)}
           >
             <X />

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ArrowUpRight,
-  CalendarDays,
   ExternalLink,
   ListTodo,
   Moon,
@@ -10,7 +9,6 @@ import {
   Pencil,
   Play,
   Plus,
-  Repeat,
   Sun,
 } from 'lucide-react';
 import { useStore } from '../hooks/use-store';
@@ -24,21 +22,25 @@ import { RoutineIcon, OccurrenceCard } from './OccurrenceCard';
 import { QuickDelay } from './QuickDelay';
 import { RoutineForm, type Template } from './RoutineForm';
 import { PageLink } from './PageLink';
+import { PauseRoutineDialog } from './PauseRoutineDialog';
 
-type PopoverView = 'today' | 'daily' | 'weekly' | 'all';
+type PopoverView = 'today' | 'routines';
 
 export function Popup() {
   const { state, act, error } = useStore();
   const { theme, toggleTheme } = useTheme();
   const [view, setView] = useState<PopoverView>('today');
   const [form, setForm] = useState<{ routine?: Routine; template?: Template }>();
+  const [pauseRoutine, setPauseRoutine] = useState<Routine>();
 
-  const todayItems = state ? forDay(state, new Date()) : [];
+  const todayItems = state
+    ? forDay(state, new Date()).sort(
+        (a, b) =>
+          Number(a.status !== 'pending') - Number(b.status !== 'pending') ||
+          a.scheduledAt - b.scheduledAt,
+      )
+    : [];
   const routines = state?.routines ?? [];
-  const dailyRoutines = routines.filter((r) => r.schedule.frequency === 'daily');
-  const weeklyRoutines = routines.filter((r) => r.schedule.frequency === 'weekly');
-  const allRoutines = routines;
-
   const todayCompleted = todayItems.filter((o) => o.status === 'completed').length;
   const todayPending = todayItems.filter((o) => o.status === 'pending').length;
 
@@ -109,60 +111,31 @@ export function Popup() {
         <button
           type="button"
           role="tab"
-          aria-selected={view === 'daily'}
-          className={view === 'daily' ? 'active' : ''}
-          onClick={() => setView('daily')}
+          aria-selected={view === 'routines'}
+          className={view === 'routines' ? 'active' : ''}
+          onClick={() => setView('routines')}
         >
-          Daily
-          {dailyRoutines.length > 0 && <span className="tab-badge">{dailyRoutines.length}</span>}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'weekly'}
-          className={view === 'weekly' ? 'active' : ''}
-          onClick={() => setView('weekly')}
-        >
-          Weekly
-          {weeklyRoutines.length > 0 && <span className="tab-badge">{weeklyRoutines.length}</span>}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'all'}
-          className={view === 'all' ? 'active' : ''}
-          onClick={() => setView('all')}
-        >
-          All
-          {allRoutines.length > 0 && <span className="tab-badge">{allRoutines.length}</span>}
+          Routines
+          {routines.length > 0 && <span className="tab-badge">{routines.length}</span>}
         </button>
       </div>
 
       <div className="popup-heading">
         <div className="popup-heading-content">
           <span>
-            {view === 'today' && <Sun size={14} />}
-            {view === 'daily' && <Repeat size={14} />}
-            {view === 'weekly' && <CalendarDays size={14} />}
-            {view === 'all' && <ListTodo size={14} />}
-            {view === 'today' &&
-              new Date().toLocaleDateString([], {
-                weekday: 'long',
-                month: 'short',
-                day: 'numeric',
-              })}
-            {view === 'daily' && 'Daily rhythms'}
-            {view === 'weekly' && 'Weekly rhythms'}
-            {view === 'all' && 'All routines'}
+            {view === 'today' ? <Sun size={14} /> : <ListTodo size={14} />}
+            {view === 'today'
+              ? new Date().toLocaleDateString([], {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric',
+                })
+              : 'All routines'}
           </span>
           <p>
-            {view === 'today' && `${todayCompleted} of ${todayItems.length} completed`}
-            {view === 'daily' &&
-              `${dailyRoutines.filter((r) => r.enabled).length} active · ${dailyRoutines.filter((r) => !r.enabled).length} paused`}
-            {view === 'weekly' &&
-              `${weeklyRoutines.filter((r) => r.enabled).length} active · ${weeklyRoutines.filter((r) => !r.enabled).length} paused`}
-            {view === 'all' &&
-              `${allRoutines.filter((r) => r.enabled).length} of ${allRoutines.length} active`}
+            {view === 'today'
+              ? `${todayCompleted} of ${todayItems.length} completed`
+              : `${routines.filter((r) => r.enabled).length} active · ${routines.filter((r) => !r.enabled).length} paused`}
           </p>
         </div>
       </div>
@@ -174,7 +147,7 @@ export function Popup() {
       )}
 
       <div className="popup-list">
-        {view === 'today' && (
+        {view === 'today' ? (
           <>
             {todayItems.map((item) => (
               <OccurrenceCard key={item.id} item={item} act={act} compact minimal />
@@ -187,167 +160,56 @@ export function Popup() {
               </div>
             )}
           </>
-        )}
-
-        {view === 'daily' && (
+        ) : (
           <>
-            {dailyRoutines.map((r) => {
-              const occ = todayItems.find((o) => o.routineId === r.id);
-              if (occ && r.enabled) {
-                return <OccurrenceCard key={occ.id} item={occ} act={act} compact minimal />;
-              }
-              return (
-                <article key={r.id} className={`managed-routine ${!r.enabled ? 'paused' : ''}`}>
-                  <RoutineIcon />
-                  <div className="managed-routine-copy">
-                    <h3>
-                      {r.title}
-                      {!r.enabled && <span className="status-tag">Paused</span>}
-                    </h3>
-                    <p>
-                      {scheduleLabel(r.schedule)} · {timeLabel(r.schedule.time)}
-                    </p>
-                    {r.url && (
-                      <PageLink href={r.url} target="_blank" rel="noopener noreferrer">
-                        {new URL(r.url).hostname}
-                        <ExternalLink size={11} />
-                      </PageLink>
-                    )}
-                  </div>
-                  <div className="routine-controls">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`${r.enabled ? 'Pause' : 'Resume'} ${r.title}`}
-                      onClick={() => void act({ type: 'toggle-routine', id: r.id })}
-                    >
-                      {r.enabled ? <Pause size={14} /> : <Play size={14} />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Edit ${r.title}`}
-                      onClick={() => setForm({ routine: r })}
-                    >
-                      <Pencil size={14} />
-                    </Button>
-                  </div>
-                </article>
-              );
-            })}
-            {state && dailyRoutines.length === 0 && (
-              <div className="popup-empty">
-                <Repeat size={28} />
-                <h2>No daily routines yet.</h2>
-                <p>Add a daily routine to build steady momentum.</p>
-              </div>
-            )}
-          </>
-        )}
-
-        {view === 'weekly' && (
-          <>
-            {weeklyRoutines.map((r) => {
-              const occ = todayItems.find((o) => o.routineId === r.id);
-              if (occ && r.enabled) {
-                return <OccurrenceCard key={occ.id} item={occ} act={act} compact minimal />;
-              }
-              return (
-                <article key={r.id} className={`managed-routine ${!r.enabled ? 'paused' : ''}`}>
-                  <RoutineIcon />
-                  <div className="managed-routine-copy">
-                    <h3>
-                      {r.title}
-                      {!r.enabled && <span className="status-tag">Paused</span>}
-                    </h3>
-                    <p>
-                      {scheduleLabel(r.schedule)} · {timeLabel(r.schedule.time)}
-                    </p>
-                    {r.url && (
-                      <PageLink href={r.url} target="_blank" rel="noopener noreferrer">
-                        {new URL(r.url).hostname}
-                        <ExternalLink size={11} />
-                      </PageLink>
-                    )}
-                  </div>
-                  <div className="routine-controls">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`${r.enabled ? 'Pause' : 'Resume'} ${r.title}`}
-                      onClick={() => void act({ type: 'toggle-routine', id: r.id })}
-                    >
-                      {r.enabled ? <Pause size={14} /> : <Play size={14} />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Edit ${r.title}`}
-                      onClick={() => setForm({ routine: r })}
-                    >
-                      <Pencil size={14} />
-                    </Button>
-                  </div>
-                </article>
-              );
-            })}
-            {state && weeklyRoutines.length === 0 && (
-              <div className="popup-empty">
-                <CalendarDays size={28} />
-                <h2>No weekly routines yet.</h2>
-                <p>Give weekly rituals their own space in your week.</p>
-              </div>
-            )}
-          </>
-        )}
-
-        {view === 'all' && (
-          <>
-            {allRoutines.map((r) => {
-              const occ = todayItems.find((o) => o.routineId === r.id);
-              if (occ && r.enabled) {
-                return <OccurrenceCard key={occ.id} item={occ} act={act} compact minimal />;
-              }
-              return (
-                <article key={r.id} className={`managed-routine ${!r.enabled ? 'paused' : ''}`}>
-                  <RoutineIcon />
-                  <div className="managed-routine-copy">
-                    <h3>
-                      {r.title}
-                      {!r.enabled && <span className="status-tag">Paused</span>}
-                    </h3>
-                    <p>
-                      {scheduleLabel(r.schedule)} · {timeLabel(r.schedule.time)}
-                    </p>
-                    {r.url && (
-                      <PageLink href={r.url} target="_blank" rel="noopener noreferrer">
-                        {new URL(r.url).hostname}
-                        <ExternalLink size={11} />
-                      </PageLink>
-                    )}
-                  </div>
-                  <div className="routine-controls">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`${r.enabled ? 'Pause' : 'Resume'} ${r.title}`}
-                      onClick={() => void act({ type: 'toggle-routine', id: r.id })}
-                    >
-                      {r.enabled ? <Pause size={14} /> : <Play size={14} />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Edit ${r.title}`}
-                      onClick={() => setForm({ routine: r })}
-                    >
-                      <Pencil size={14} />
-                    </Button>
-                  </div>
-                </article>
-              );
-            })}
-            {state && allRoutines.length === 0 && (
+            {routines.map((routine) => (
+              <article
+                key={routine.id}
+                className={`managed-routine ${!routine.enabled ? 'paused' : ''}`}
+              >
+                <RoutineIcon />
+                <div className="managed-routine-copy">
+                  <h3>
+                    {routine.title}
+                    {!routine.enabled && <span className="status-tag">Paused</span>}
+                  </h3>
+                  <p>
+                    {scheduleLabel(routine.schedule)} · {timeLabel(routine.schedule.time)}
+                    {routine.pausedUntil &&
+                      ` · Resumes ${new Date(routine.pausedUntil).toLocaleDateString([], { month: 'short', day: 'numeric' })}`}
+                  </p>
+                  {routine.url && (
+                    <PageLink href={routine.url} target="_blank" rel="noopener noreferrer">
+                      {new URL(routine.url).hostname}
+                      <ExternalLink size={11} />
+                    </PageLink>
+                  )}
+                </div>
+                <div className="routine-controls">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`${routine.enabled ? 'Pause' : 'Resume'} ${routine.title}`}
+                    onClick={() =>
+                      routine.enabled
+                        ? setPauseRoutine(routine)
+                        : void act({ type: 'toggle-routine', id: routine.id })
+                    }
+                  >
+                    {routine.enabled ? <Pause size={14} /> : <Play size={14} />}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Edit ${routine.title}`}
+                    onClick={() => setForm({ routine })}
+                  >
+                    <Pencil size={14} />
+                  </Button>
+                </div>
+              </article>
+            ))}
+            {state && routines.length === 0 && (
               <div className="popup-empty">
                 <ListTodo size={28} />
                 <h2>No routines yet.</h2>
@@ -363,11 +225,14 @@ export function Popup() {
           routine={form.routine}
           template={form.template}
           onClose={() => setForm(undefined)}
-          onSave={async (routine) => {
-            const ok = await act({ type: 'save-routine', routine });
-            if (ok) setForm(undefined);
-            return ok;
-          }}
+          onSave={(routine) => act({ type: 'save-routine', routine })}
+        />
+      )}
+      {pauseRoutine && (
+        <PauseRoutineDialog
+          routine={pauseRoutine}
+          act={act}
+          onClose={() => setPauseRoutine(undefined)}
         />
       )}
     </main>

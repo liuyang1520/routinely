@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -28,6 +28,7 @@ import { useStore } from '../hooks/use-store';
 import { useTheme } from '../hooks/use-theme';
 import { useStorageUsage } from '../hooks/use-storage-usage';
 import { dayKey, addDays, forDay, scheduleLabel, startOfDay, timeLabel } from '../lib/schedule';
+import { weeklyNote } from '../lib/insights';
 import type { Routine } from '../lib/model';
 import { download } from '../lib/export';
 import { Brand } from './Brand';
@@ -41,15 +42,17 @@ import { Settings } from './Settings';
 import { ReminderPreview } from './ReminderPanel';
 import { Later } from './Later';
 import { PageLink } from './PageLink';
+import { PauseRoutineDialog } from './PauseRoutineDialog';
+import { Scratchpad } from './Scratchpad';
 
 type Page = 'today' | 'routines' | 'later' | 'activity' | 'settings';
 const templates: Template[] = [
   {
-    title: 'Catch up on Hacker News',
-    url: 'https://news.ycombinator.com',
+    title: 'Read for 10 minutes',
+    url: '',
     label: 'Learning',
     time: '21:00',
-    notes: 'A few interesting ideas to end the day.',
+    notes: 'A little time with something worth reading.',
   },
   {
     title: 'Take a screen break',
@@ -75,9 +78,11 @@ export function App() {
   const [filterLabel, setFilterLabel] = useState('');
   const [form, setForm] = useState<{ routine?: Routine; template?: Template }>();
   const [remove, setRemove] = useState<Routine>();
+  const [pauseRoutine, setPauseRoutine] = useState<Routine>();
   const [preview, setPreview] = useState(false);
   const [help, setHelp] = useState(false);
   const { theme, setTheme, toggleTheme } = useTheme();
+  const note = useMemo(() => state && weeklyNote(state), [state]);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (
@@ -214,7 +219,9 @@ export function App() {
             <ChevronRight size={13} />
             <strong>
               {page === 'today'
-                ? 'Today'
+                ? isToday
+                  ? 'Today'
+                  : date.toLocaleDateString([], { month: 'short', day: 'numeric' })
                 : page === 'routines'
                   ? 'My routines'
                   : page === 'later'
@@ -273,7 +280,21 @@ export function App() {
           {page === 'activity' ? (
             <Activity state={state} act={act} />
           ) : page === 'later' ? (
-            <Later state={state} act={act} />
+            <Later
+              state={state}
+              act={act}
+              onMakeRoutine={(item) =>
+                setForm({
+                  template: {
+                    title: item.title,
+                    url: item.url,
+                    label: '',
+                    time: '21:00',
+                    notes: '',
+                  },
+                })
+              }
+            />
           ) : page === 'settings' ? (
             <Settings
               state={state}
@@ -289,7 +310,7 @@ export function App() {
                 <div>
                   <p className="eyebrow">
                     {page === 'today'
-                      ? new Date()
+                      ? date
                           .toLocaleDateString([], {
                             weekday: 'long',
                             month: 'long',
@@ -300,13 +321,17 @@ export function App() {
                   </p>
                   <h1>
                     {page === 'today'
-                      ? 'Good habits. A little at a time.'
+                      ? isToday
+                        ? 'Good habits. A little at a time.'
+                        : `A little space for ${date.toLocaleDateString([], { weekday: 'long' })}.`
                       : 'Your rhythm, your routines.'}
                     <span className="heading-dot"> </span>
                   </h1>
                   <p>
                     {page === 'today'
-                      ? 'A calmer place for the things you want to keep coming back to.'
+                      ? isToday
+                        ? 'A calmer place for the things you want to keep coming back to.'
+                        : 'The small things you made room for on this day.'
                       : 'Small things worth making time for. All in one place.'}
                   </p>
                 </div>
@@ -372,6 +397,12 @@ export function App() {
                         })}
                       </div>
                     </section>
+                    {isToday && note && (
+                      <div className="weekly-note">
+                        <Sparkles size={15} />
+                        <span>{note}</span>
+                      </div>
+                    )}
                     <div className="routine-toolbar">
                       <div className="filter-tabs">
                         {['', ...labels].map((c) => (
@@ -454,33 +485,33 @@ export function App() {
                         </div>
                       </section>
                     )}
-                    <div className="starter-section">
-                      <div className="section-title">
-                        <h2>
-                          <Sparkles size={15} />
-                          {state.routines.length
-                            ? 'Make room for something good'
-                            : 'A little inspiration to get you going'}
-                        </h2>
-                        <span className="muted text-xs">Start small</span>
+                    {isToday && <Scratchpad value={state.scratchpad} act={act} />}
+                    {state.routines.length === 0 && (
+                      <div className="starter-section">
+                        <div className="section-title">
+                          <h2>
+                            <Sparkles size={15} />A little inspiration to get you going
+                          </h2>
+                          <span className="muted text-xs">Start small</span>
+                        </div>
+                        <div className="starter-grid">
+                          {templates.map((t) => (
+                            <button
+                              key={t.title}
+                              className="starter-card"
+                              onClick={() => setForm({ template: t })}
+                            >
+                              <RoutineIcon />
+                              <strong>{t.title}</strong>
+                              <span>
+                                {t.label} · {timeLabel(t.time)}
+                              </span>
+                              <ArrowRight size={15} />
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="starter-grid">
-                        {templates.map((t) => (
-                          <button
-                            key={t.title}
-                            className="starter-card"
-                            onClick={() => setForm({ template: t })}
-                          >
-                            <RoutineIcon />
-                            <strong>{t.title}</strong>
-                            <span>
-                              {t.label} · {timeLabel(t.time)}
-                            </span>
-                            <ArrowRight size={15} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -531,6 +562,16 @@ export function App() {
                                 {r.label}
                               </>
                             )}
+                            {r.pausedUntil && (
+                              <>
+                                <span>·</span>
+                                Resumes{' '}
+                                {new Date(r.pausedUntil).toLocaleDateString([], {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </>
+                            )}
                           </p>
                           {r.url && (
                             <PageLink href={r.url} target="_blank" rel="noopener noreferrer">
@@ -544,7 +585,11 @@ export function App() {
                             variant="ghost"
                             size="icon"
                             aria-label={`${r.enabled ? 'Pause' : 'Resume'} ${r.title}`}
-                            onClick={() => void act({ type: 'toggle-routine', id: r.id })}
+                            onClick={() =>
+                              r.enabled
+                                ? setPauseRoutine(r)
+                                : void act({ type: 'toggle-routine', id: r.id })
+                            }
                           >
                             {r.enabled ? <Pause /> : <Play />}
                           </Button>
@@ -601,6 +646,13 @@ export function App() {
           onSave={(routine) => act({ type: 'save-routine', routine })}
         />
       )}
+      {pauseRoutine && (
+        <PauseRoutineDialog
+          routine={pauseRoutine}
+          act={act}
+          onClose={() => setPauseRoutine(undefined)}
+        />
+      )}
       <Confirm
         open={!!remove}
         onOpenChange={(open) => {
@@ -635,10 +687,11 @@ export function App() {
           </p>
           <h3>Show up in your own way</h3>
           <p>
-            When it’s time, a reminder appears on your active webpage. Open the link, leave a note,
-            complete the check-in, or snooze for 10 minutes. Manually opening a link doesn’t mark a
-            routine complete. When Routinely opens a due page for you, it completes the check-in
-            after a short delay if you stay there.
+            When it’s time, the toolbar shows due routines. Floating reminders appear on the
+            matching page for linked routines, or on your active webpage for routines without a
+            link. Open the link, leave a note, complete the check-in, or snooze for 10 minutes or
+            until later today. Opening a link never marks a routine complete; choose Done when you
+            have done it. Closing a reminder dismisses it for this page visit.
           </p>
           <h3>Keep a little perspective</h3>
           <p>
@@ -650,7 +703,7 @@ export function App() {
             Open the toolbar popup on a webpage and choose 1 hour, 3 hours, 1 day, or a custom time.
             We’ll switch to its tab or reopen it if it’s closed. Reschedule or cancel it in View
             later. Routine links also reuse existing tabs; automatic switching for routine reminders
-            can be turned off in Settings.
+            can be turned on in Settings.
           </p>
           <h3>Keep what’s yours</h3>
           <p>
