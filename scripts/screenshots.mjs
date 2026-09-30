@@ -1,6 +1,6 @@
 import { chromium, expect } from '@playwright/test';
 import { createServer } from 'node:http';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 
@@ -160,6 +160,12 @@ try {
   });
   console.log('Captured extension-popover.png');
   if (errors.length) throw new Error(`Browser errors: ${errors.join('\n')}`);
+
+  const websiteAssets = resolve('docs/assets');
+  await mkdir(websiteAssets, { recursive: true });
+  for (const filename of ['homepage.png', 'floating-window.png', 'extension-popover.png']) {
+    await copyFile(join(output, filename), join(websiteAssets, filename));
+  }
 } finally {
   await context?.close();
   await new Promise((done) => server.close(done));

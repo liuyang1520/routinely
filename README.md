@@ -6,6 +6,8 @@
 
 A quiet browser extension for the things you want to keep coming back to. Built with **WXT, React, TypeScript, Tailwind CSS, and shadcn-style Radix primitives**, managed with **pnpm**.
 
+[Website](https://liuyang1520.github.io/routinely/) · [Privacy policy](https://liuyang1520.github.io/routinely/privacy.html)
+
 ## Screenshots
 
 ### Homepage
@@ -125,7 +127,12 @@ lib/
   export.ts                Validated backups and CSV export
   tabs.ts                  Current-page lookup and cross-window open-or-focus behavior
 tests/                     Unit and real-extension tests
+docs/                      Static GitHub Pages marketing site and privacy policy
 ```
+
+The website publishes from `main` → `/docs` through GitHub Pages. It uses plain HTML, CSS, a small screenshot switcher, and a locally hosted font. No site build is required. Preview it with `python3 -m http.server 3001 --bind 127.0.0.1 --directory docs`. `pnpm screenshots` refreshes both the README and website images.
+
+The homepage includes the Google Search Console verification tag. Add `https://liuyang1520.github.io/routinely/` as a **URL-prefix property** in Search Console and verify with the **HTML tag** method after deployment.
 
 The background worker is the sole extension storage writer. Actions from all extension views pass through one queue, preventing concurrent tabs from overwriting each other's changes. The content script uses WXT's [isolated shadow-root UI](https://wxt.dev/guide/essentials/content-scripts) so the host page's styles and the reminder's styles remain separate. Dependency age configuration follows [pnpm's settings](https://pnpm.io/settings#minimumreleaseage).
 

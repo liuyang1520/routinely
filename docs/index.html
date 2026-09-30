@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="google-site-verification" content="RYDWQ1E8G_sjD5C16ey5EXoblcBX19mydC1oInhgDlE" />
+    <title>Routinely — Small habits. More breathing room.</title>
+    <meta
+      name="description"
+      content="A quieter browser extension for your everyday routines. Gentle reminders, saved pages, and a little perspective. Free, local, and account-free."
+    />
+    <meta name="theme-color" content="#f8f9f5" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Routinely — Small habits. More breathing room." />
+    <meta
+      property="og:description"
+      content="Make time for the things you want to keep coming back to. A quiet browser extension, with your data kept in your browser."
+    />
+    <meta property="og:url" content="https://liuyang1520.github.io/routinely/" />
+    <meta
+      property="og:image"
+      content="https://liuyang1520.github.io/routinely/assets/homepage.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://liuyang1520.github.io/routinely/" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="preload" href="assets/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="style.css" />
+    <script src="site.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="header-inner wrap">
+        <a class="wordmark" href="./" aria-label="Routinely home">
+          <img src="assets/icon.svg" width="36" height="36" alt="" />
+          <span>routinely<span class="brand-dot">.</span></span>
+        </a>
+        <nav aria-label="Main navigation">
+          <a class="nav-detail" href="#features">Features</a>
+          <a class="nav-detail" href="privacy.html">Privacy</a>
+          <a
+            class="button button-small"
+            href="https://github.com/liuyang1520/routinely#load-a-production-build"
+            >Get Routinely <span aria-hidden="true">↗</span></a
+          >
+        </nav>
+      </div>
+    </header>
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <p class="eyebrow hero-eyebrow">
+          <span class="status-dot" aria-hidden="true"></span> A little intention, every day
+        </p>
+        <h1 id="hero-title">Small habits.<br /><em>More breathing room.</em></h1>
+        <p class="hero-copy">
+          For the chapter you want to read. The break you need to take.<br class="desktop-break" />
+          The little things you want to keep coming back to.
+        </p>
+        <div class="hero-actions">
+          <a class="button" href="https://github.com/liuyang1520/routinely#load-a-production-build"
+            >Get Routinely
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg
+          ></a>
+          <a class="text-link" href="#in-your-browser"
+            >Take a look <span aria-hidden="true">↓</span></a
+          >
+        </div>
+        <p class="hero-footnote">
+          Free to use <span aria-hidden="true">·</span> No account needed
+          <span aria-hidden="true">·</span> Made for your browser
+        </p>
+      </section>
+
+      <section
+        class="showcase wrap"
+        id="in-your-browser"
+        aria-label="See Routinely in your browser"
+      >
+        <div class="showcase-toolbar">
+          <span class="showcase-label"
+            ><span class="status-dot" aria-hidden="true"></span> A calmer corner of your
+            browser</span
+          >
+          <div class="screenshot-tabs" role="tablist" aria-label="Explore Routinely" hidden>
+            <button
+              id="tab-homepage"
+              role="tab"
+              aria-selected="true"
+              aria-controls="product-preview"
+              data-view="homepage"
+            >
+              Your day
+            </button>
+            <button
+              id="tab-floating"
+              role="tab"
+              aria-selected="false"
+              aria-controls="product-preview"
+              tabindex="-1"
+              data-view="floating"
+            >
+              A gentle nudge
+            </button>
+            <button
+              id="tab-popover"
+              role="tab"
+              aria-selected="false"
+              aria-controls="product-preview"
+              tabindex="-1"
+              data-view="popover"
+            >
+              Within reach
+            </button>
+          </div>
+        </div>
+        <div
+          class="screenshot-stage"
+          id="product-preview"
+          role="tabpanel"
+          aria-labelledby="tab-homepage"
+        >
+          <a
+            id="screenshot-link"
+            href="assets/homepage.png"
+            target="_blank"
+            rel="noopener"
+            aria-label="Open full-size dashboard screenshot"
+          >
+            <img
+              id="product-image"
+              src="assets/homepage.png"
+              width="2560"
+              height="1600"
+              alt="Routinely's Today dashboard with a weekly calendar, two pending routines, and completed check-ins."
+              fetchpriority="high"
+            />
+          </a>
+        </div>
+        <div class="showcase-caption">
+          <p id="screenshot-caption">A little structure. A clear view of your day.</p>
+          <span>Real extension. Illustrative routines.</span>
+        </div>
+      </section>
+
+      <section class="features wrap section-space" id="features" aria-labelledby="features-title">
+        <div class="section-heading">
+          <p class="eyebrow">Less keeping track. More showing up.</p>
+          <h2 id="features-title">Room for a rhythm<br />that feels like yours.</h2>
+          <p>
+            Some things happen every day. Others, every now and then.<br class="desktop-break" />
+            Routinely helps you make space for both.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <rect x="4" y="5" width="16" height="16" rx="3" />
+                <path d="M8 3v4m8-4v4M4 11h16m-11 4h.01M13 15h.01" /></svg
+            ></span>
+            <h3>Your pace, your plan.</h3>
+            <p>
+              Every day, selected weekdays, once a month, or every few days. Build a routine around
+              your life.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true"
+              ><svg viewBox="0 0 24 24">
+                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg
+            ></span>
+            <h3>A nudge, in the right place.</h3>
+            <p>
+              A small floating reminder on the page you choose. Check in, leave a note, or come back
+              a little later.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-icon" aria-hidden="true"
+              ><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M8 15l4-4 4 2 4-7" /></svg
+            ></span>
+            <h3>See the small things add up.</h3>
+            <p>
+              A completion calendar and a little perspective on your progress. Notice the days you
+              made time.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="later-section wrap" aria-labelledby="later-title">
+        <div class="later-copy">
+          <p class="eyebrow">For the good things you find along the way</p>
+          <h2 id="later-title">A good page.<br /><em>A better time.</em></h2>
+          <p>
+            Found something you want to read, but not right now? Save the tab for later. Routinely
+            brings it back when you have a moment.
+          </p>
+          <ul class="quiet-list">
+            <li>
+              <span aria-hidden="true">↗</span> Save for an hour, a day, or a time you choose.
+            </li>
+            <li>
+              <span aria-hidden="true">↗</span> Reopen the page, or return to its existing tab.
+            </li>
+            <li>
+              <span aria-hidden="true">↗</span> Make a recurring routine out of a page you love.
+            </li>
+          </ul>
+        </div>
+        <div class="popover-display">
+          <span class="floating-label"
+            ><span class="status-dot" aria-hidden="true"></span> One click away</span
+          >
+          <img
+            src="assets/extension-popover.png"
+            width="840"
+            height="1180"
+            alt="The Routinely toolbar popup with View later shortcuts and today's check-ins."
+            loading="lazy"
+          />
+          <span class="popover-caption">A little less “I'll remember.”</span>
+        </div>
+      </section>
+
+      <section class="privacy-section wrap section-space" aria-labelledby="privacy-title">
+        <div class="privacy-card">
+          <div class="privacy-copy">
+            <p class="eyebrow">Personal by design</p>
+            <h2 id="privacy-title">Your routines.<br /><em>Your business.</em></h2>
+            <p>
+              Your routines, notes, and saved pages stay in your browser profile. No account to
+              create. No telemetry. No developer cloud to send your data to.
+            </p>
+            <a class="text-link" href="privacy.html"
+              >Read our privacy policy <span aria-hidden="true">↗</span></a
+            >
+          </div>
+          <div class="privacy-details">
+            <div>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="13" rx="2" />
+                <path d="M8 21h8m-4-4v4" /></svg
+              ><span
+                ><strong>Kept on your device</strong
+                ><small>Your data lives in this browser profile.</small></span
+              >
+            </div>
+            <div>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3 4 6v5c0 5 8 10 8 10s8-5 8-10V6l-8-3Z" />
+                <path d="m8 12 3 3 5-6" /></svg
+              ><span
+                ><strong>No tracking or ads</strong
+                ><small>Your attention is yours to keep.</small></span
+              >
+            </div>
+            <div>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4" /></svg
+              ><span
+                ><strong>Take it with you</strong
+                ><small>Export a backup or your check-in history.</small></span
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="faq-section wrap" aria-labelledby="faq-title">
+        <div>
+          <p class="eyebrow">A few things you might wonder</p>
+          <h2 id="faq-title">Good to know.</h2>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>What do I need to get started?<span aria-hidden="true">+</span></summary>
+            <p>
+              A desktop browser and a small habit you'd like to return to. You can build and load
+              Routinely in Chrome or Edge using the
+              <a href="https://github.com/liuyang1520/routinely#load-a-production-build"
+                >GitHub installation instructions</a
+              >. A Firefox build is also supported.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Does it work when my browser is closed?<span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              Reminders run while your browser is running. If your device sleeps or you close the
+              browser, Routinely catches up when you return. Browser alarms can arrive late after
+              sleep.
+            </p>
+          </details>
+          <details>
+            <summary>Can I pause or move a routine?<span aria-hidden="true">+</span></summary>
+            <p>
+              Of course. Snooze a reminder for ten minutes, move it to later today, skip a check-in,
+              or pause a routine for longer. Your completed history stays available.
+            </p>
+          </details>
+          <details>
+            <summary>Does my data sync between devices?<span aria-hidden="true">+</span></summary>
+            <p>
+              Your data stays local to this browser profile. There is no cloud sync. You can export
+              a JSON backup and import it into another profile. Back up your data before removing
+              the extension.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section class="closing wrap section-space" aria-labelledby="closing-title">
+        <div class="closing-mark" aria-hidden="true">
+          <img src="assets/icon.svg" width="56" height="56" alt="" />
+        </div>
+        <p class="eyebrow">Something small is a good place to start</p>
+        <h2 id="closing-title">Make a little room<br /><em>for what matters.</em></h2>
+        <a class="button" href="https://github.com/liuyang1520/routinely#load-a-production-build"
+          >Get Routinely <span aria-hidden="true">↗</span></a
+        >
+        <p class="closing-note">Available from GitHub. Free to use, without an account.</p>
+      </section>
+    </main>
+    <footer class="site-footer wrap">
+      <a class="wordmark" href="./" aria-label="Routinely home"
+        ><span>routinely<span class="brand-dot">.</span></span></a
+      >
+      <p>Small habits, thoughtfully kept.</p>
+      <nav aria-label="Footer navigation">
+        <a href="https://github.com/liuyang1520/routinely"
+          >GitHub <span aria-hidden="true">↗</span></a
+        ><a href="https://github.com/liuyang1520/routinely/issues">Support</a
+        ><a href="privacy.html">Privacy</a>
+      </nav>
+    </footer>
+  </body>
+</html>
