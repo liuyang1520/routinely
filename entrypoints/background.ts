@@ -116,18 +116,19 @@ export default defineBackground(() => {
         };
         await browser.storage.local.set({ [STORAGE_KEY]: state });
         // One focus change per batch avoids cycling through several due tabs.
-        const item = items[0]!;
-        try {
-          await openOrFocusTab(item.url);
-        } catch {
-          // Let the next tick retry if the destination could not be opened.
-          state = {
-            ...state,
-            occurrences: state.occurrences.map((o) =>
-              ids.has(o.id) ? { ...o, tabHandledAt: undefined } : o,
-            ),
-          };
-          await browser.storage.local.set({ [STORAGE_KEY]: state });
+        for (const [index, item] of items.entries()) {
+          try {
+            await openOrFocusTab(item.url, { focus: index === 0 });
+          } catch {
+            // Retry only this destination; successful items must not steal focus again.
+            state = {
+              ...state,
+              occurrences: state.occurrences.map((o) =>
+                o.id === item.id ? { ...o, tabHandledAt: undefined } : o,
+              ),
+            };
+            await browser.storage.local.set({ [STORAGE_KEY]: state });
+          }
         }
       }
     }

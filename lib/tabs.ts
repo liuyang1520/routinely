@@ -1,7 +1,10 @@
 import { browser } from 'wxt/browser';
 import { safeUrl } from './model';
 import { normalizedPageUrl } from './urls';
-export async function openOrFocusTab(value: string, createIfMissing = true) {
+export async function openOrFocusTab(
+  value: string,
+  { createIfMissing = true, focus = true }: { createIfMissing?: boolean; focus?: boolean } = {},
+) {
   const url = safeUrl.parse(value);
   if (!url) throw new Error('This routine has no link.');
   const target = normalizedPageUrl(url);
@@ -22,6 +25,7 @@ export async function openOrFocusTab(value: string, createIfMissing = true) {
     );
   for (const tab of matches) {
     if (tab.id === undefined) continue;
+    if (!focus) return { reused: true, tabId: tab.id };
     try {
       await browser.tabs.update(tab.id, { active: true });
       if (tab.windowId !== undefined) await browser.windows.update(tab.windowId, { focused: true });
@@ -31,8 +35,9 @@ export async function openOrFocusTab(value: string, createIfMissing = true) {
     }
   }
   if (!createIfMissing) return { reused: false };
-  const tab = await browser.tabs.create({ url, active: true });
-  if (tab.windowId !== undefined) await browser.windows.update(tab.windowId, { focused: true });
+  const tab = await browser.tabs.create({ url, active: focus });
+  if (focus && tab.windowId !== undefined)
+    await browser.windows.update(tab.windowId, { focused: true });
   return { reused: false, tabId: tab.id };
 }
 

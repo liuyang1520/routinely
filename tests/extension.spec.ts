@@ -503,6 +503,74 @@ test('alarms open the target page and keep its reminder there; snooze, notes, an
   await second.close();
 });
 
+for (const reuseFirst of [false, true]) {
+  test(`simultaneous routines open every page and focus only the first (${reuseFirst ? 'existing' : 'new'} first tab)`, async () => {
+    await seed(emptyState());
+    const firstUrl = `${url}/batch-first`;
+    const secondUrl = `${url}/batch-existing`;
+    const thirdUrl = `${url}/batch-new`;
+    const existing = await context.newPage();
+    await existing.goto(secondUrl);
+    const initialFirst = reuseFirst ? await context.newPage() : undefined;
+    if (initialFirst) await initialFirst.goto(firstUrl);
+    const now = Date.now();
+    const date = new Date(now);
+    date.setSeconds(0, 0);
+    const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    const state = emptyState(date.getTime() - 60000);
+    state.settings.focusExistingTabs = true;
+    // The fourth routine shares the third page, which must only open once.
+    state.routines = [firstUrl, secondUrl, thirdUrl, thirdUrl].map((address, index) => ({
+      id: `batch-${index}`,
+      title: `Batch routine ${index}`,
+      url: address,
+      label: '',
+      notes: '',
+      schedule: { frequency: 'daily', time, days: [1], monthDay: 1, interval: 1 },
+      enabled: true,
+      startAt: date.getTime() - 60000,
+      createdAt: date.getTime() - 60000,
+    }));
+    await seed(state);
+    await expect
+      .poll(() =>
+        [firstUrl, secondUrl, thirdUrl].map(
+          (address) => context.pages().filter((page) => page.url() === address).length,
+        ),
+      )
+      .toEqual([1, 1, 1]);
+    const first = context.pages().find((page) => page.url() === firstUrl)!;
+    const third = context.pages().find((page) => page.url() === thirdUrl)!;
+    await expect(first.getByRole('heading', { name: 'Batch routine 0' })).toBeVisible();
+    expect(
+      await worker.evaluate(
+        async () =>
+          (
+            await (globalThis as any).chrome.tabs.query({ active: true, lastFocusedWindow: true })
+          )[0].url,
+      ),
+    ).toBe(firstUrl);
+    expect((await read()).occurrences.every((item) => item.tabHandledAt !== undefined)).toBe(true);
+    await expect(existing.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
+    await expect(third.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
+    await existing.bringToFront();
+    await expect(existing.getByRole('heading', { name: 'Batch routine 1' })).toBeVisible();
+    await third.bringToFront();
+    const panel = third.getByRole('region', { name: 'Routinely reminder' });
+    await expect(panel.getByRole('heading', { name: 'Batch routine 2' })).toBeVisible();
+    await panel.getByRole('button', { name: 'Show reminder 2' }).click();
+    await expect(panel.getByRole('heading', { name: 'Batch routine 3' })).toBeVisible();
+    await worker.evaluate(async () => {
+      await (globalThis as any).chrome.alarms.create('routinely-test', { when: Date.now() + 200 });
+    });
+    await expect(panel.getByRole('heading', { name: 'Batch routine 3' })).toBeVisible();
+    expect(errors).toEqual([]);
+    await first.close();
+    await existing.close();
+    await third.close();
+  });
+}
+
 test('panels only paginate reminders for their exact URL when automatic switching is disabled', async () => {
   await seed(emptyState());
   const first = await context.newPage();
