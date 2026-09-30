@@ -1,12 +1,12 @@
 import { chromium, expect } from '@playwright/test';
 import { createServer } from 'node:http';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 
-// Capture the production extension with illustrative data in a disposable profile.
-// No product DOM, styles, or screenshots are modified for the listing.
-const output = resolve('docs/chrome-web-store/assets');
+// Capture README screenshots of the production extension with illustrative data.
+// The disposable browser profile never accesses personal extension data.
+const output = resolve('assets/screenshots');
 const extension = resolve('.output/chrome-mv3');
 await readFile(join(extension, 'manifest.json'));
 await mkdir(output, { recursive: true });
@@ -24,7 +24,7 @@ const server = createServer((_req, res) => {
 });
 await new Promise((done) => server.listen(0, '127.0.0.1', done));
 const baseUrl = `http://127.0.0.1:${server.address().port}`;
-const profile = await mkdtemp(join(tmpdir(), 'routinely-store-'));
+const profile = await mkdtemp(join(tmpdir(), 'routinely-screenshots-'));
 let context;
 const errors = [];
 try {
@@ -32,8 +32,8 @@ try {
     channel: 'chromium',
     headless: true,
     viewport: { width: 1280, height: 800 },
-    deviceScaleFactor: 1,
-    colorScheme: 'dark',
+    deviceScaleFactor: 2,
+    colorScheme: 'light',
     args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
   });
   context.on('page', (page) => page.on('pageerror', (error) => errors.push(error.message)));
@@ -66,7 +66,7 @@ try {
     routine('language', 'Practice Spanish', 'Learning', '18:00'),
   ];
   const occurrence = (r, date, status = 'pending', notes = '') => ({
-    id: `${r.id}-${date}`,
+    id: `${r.id}:${new Date(date).getFullYear()}-${String(new Date(date).getMonth() + 1).padStart(2, '0')}-${String(new Date(date).getDate()).padStart(2, '0')}:${r.schedule.time}`,
     routineId: r.id,
     title: r.title,
     label: r.label,
@@ -127,7 +127,7 @@ try {
     }
   }
   const imported = await dashboard.evaluate(async (value) => {
-    await chrome.storage.local.set({ 'routinely-theme': 'dark' });
+    await chrome.storage.local.set({ 'routinely-theme': 'light' });
     return chrome.runtime.sendMessage({ type: 'mutate', action: { type: 'import', value } });
   }, state);
   if (imported.error) throw new Error(imported.error);
@@ -138,79 +138,28 @@ try {
     console.log(`Captured ${filename}`);
   }
   await expect(dashboard.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
-  await capture(dashboard, '01-today.png');
-  await dashboard.getByRole('button', { name: 'My routines', exact: true }).click();
-  await capture(dashboard, '02-routines.png');
+  await capture(dashboard, 'homepage.png');
+
   const reading = await context.newPage();
   await reading.goto(`${baseUrl}/reading`);
   await reading.bringToFront();
   const panel = reading.getByRole('region', { name: 'Routinely reminder' });
   await expect(panel).toBeVisible();
-  await expect(panel).toHaveCSS('border-top-left-radius', '24px');
-  await expect(panel.getByRole('textbox')).toHaveAttribute('placeholder', 'Add a note…');
   await expect(panel.getByRole('textbox')).toBeEmpty();
-  await expect(panel.getByRole('textbox')).toHaveCSS('border-top-width', '0px');
-  await expect(
-    panel.getByRole('button', { name: 'Resize notes for Read a chapter' }),
-  ).toBeVisible();
-  await capture(reading, '03-floating-reminder.png');
-  await dashboard.bringToFront();
-  await dashboard.getByRole('button', { name: 'View later', exact: true }).click();
-  await capture(dashboard, '04-view-later.png');
-  await dashboard.getByRole('button', { name: 'Activity', exact: true }).click();
-  await capture(dashboard, '05-activity.png');
-  await dashboard.getByRole('button', { name: 'Settings', exact: true }).click();
-  await capture(dashboard, '06-settings.png');
-  await dashboard.getByRole('switch', { name: 'Notes in floating reminders' }).click();
-  await reading.bringToFront();
-  await expect(panel).toBeVisible();
-  await expect(panel.getByRole('textbox')).toHaveCount(0);
-  await capture(reading, '07-floating-reminder-without-notes.png');
-  await reading.close();
+  await capture(reading, 'floating-window.png');
 
-  // Store promotional art uses the existing vector icon, rendered by Chromium.
-  const icon = await readFile(resolve('public/icon.svg'), 'utf8');
-  const promo = await context.newPage();
-  await promo.setViewportSize({ width: 440, height: 280 });
-  await promo.setContent(`<!doctype html><html><head><style>
-    *{box-sizing:border-box}body{margin:0;width:440px;height:280px;background:#101916;display:grid;place-items:center}
-    main{position:relative;width:440px;height:280px;display:grid;place-items:center;background:radial-gradient(ellipse at center,#234939 0%,#101916 72%);overflow:hidden}
-    .ring{position:absolute;width:220px;height:220px;border:1px solid #34d39944;border-radius:50%}.ring.outer{width:310px;height:310px;border-color:#34d39922}
-    svg{position:relative;width:154px;height:154px;filter:drop-shadow(0 12px 24px #0005)}
-    </style></head><body><main><div class="ring outer"></div><div class="ring"></div>${icon}</main></body></html>`);
-  await capture(promo, 'promo-small-440x280.png');
-  const iconBytes = await readFile(resolve('public/icon/128.png'));
-  await promo.setViewportSize({ width: 128, height: 128 });
-  await promo.setContent(
-    `<html><body style="margin:0;width:128px;height:128px;display:grid;place-items:center"><img width="96" height="96" src="data:image/png;base64,${iconBytes.toString('base64')}" alt="Routinely"></body></html>`,
-  );
-  await promo.locator('img').evaluate((image) => image.decode());
-  await promo.screenshot({ path: join(output, 'icon-128.png'), omitBackground: true });
+  const popup = await context.newPage();
+  await popup.setViewportSize({ width: 420, height: 590 });
+  await popup.goto(`chrome-extension://${id}/popup.html`);
+  await expect(popup.getByRole('tab', { name: /Today/ })).toBeVisible();
+  await popup.evaluate(() => document.fonts.ready);
+  await popup.locator('.popup').screenshot({
+    path: join(output, 'extension-popover.png'),
+    animations: 'disabled',
+    type: 'png',
+  });
+  console.log('Captured extension-popover.png');
   if (errors.length) throw new Error(`Browser errors: ${errors.join('\n')}`);
-  await writeFile(
-    join(output, 'capture.json'),
-    JSON.stringify(
-      {
-        capturedAt: new Date().toISOString(),
-        extensionVersion: '1.0.0',
-        viewport: { width: 1280, height: 800 },
-        source:
-          'Production Chrome MV3 extension loaded in isolated Chromium; illustrative data and local sample reading page.',
-        screenshots: [
-          '01-today.png',
-          '02-routines.png',
-          '03-floating-reminder.png',
-          '04-view-later.png',
-          '05-activity.png',
-          '06-settings.png',
-          '07-floating-reminder-without-notes.png',
-        ],
-        browserErrors: errors,
-      },
-      null,
-      2,
-    ) + '\n',
-  );
 } finally {
   await context?.close();
   await new Promise((done) => server.close(done));

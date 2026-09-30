@@ -1,6 +1,26 @@
+<p>
+  <img src="public/icon.svg" alt="Routinely logo" width="96" height="96" />
+</p>
+
 # Routinely
 
 A quiet browser extension for the things you want to keep coming back to. Built with **WXT, React, TypeScript, Tailwind CSS, and shadcn-style Radix primitives**, managed with **pnpm**.
+
+## Screenshots
+
+### Homepage
+
+![Routinely homepage with today’s routines and weekly progress](assets/screenshots/homepage.png)
+
+### Extension popover
+
+<img src="assets/screenshots/extension-popover.png" alt="Routinely extension popover with today’s check-ins and View later shortcuts" width="420" />
+
+### Floating reminder
+
+![Routinely floating reminder on a reading page](assets/screenshots/floating-window.png)
+
+These captures show the production extension with illustrative data. The logo is SVG, and screenshots are captured at 2× resolution. Regenerate them after `pnpm build` with `pnpm screenshots`; this uses a disposable Chromium profile.
 
 ## Start developing
 
@@ -41,7 +61,7 @@ Open <http://127.0.0.1:3000>. This preview uses separate localStorage data and s
 - Daily schedules, selected weekdays (including a weekdays shortcut), monthly dates, and every N days.
 - Optional HTTP/HTTPS links, free-text labels, and routine notes.
 - A reminder on the routine's matching page in the top-right corner by default; all four corners are available in Settings. Routines without a link appear on the active webpage.
-- Open a link, complete a check-in, skip it, snooze for ten minutes, or move the nudge to later today. Each check-in keeps independent notes.
+- Open a link, complete a check-in, skip it, snooze for ten minutes, or move the reminder to later today. Each check-in keeps independent notes. Settings can hide the notes field in floating reminders without deleting notes or hiding them in the dashboard.
 - Today view with a navigable week, early completion, a collapsible scratchpad, a short weekly reflection, and a compact toolbar popup.
 - **View later**: save the current tab from the toolbar for 1 hour, 3 hours, 1 day, or a custom date/time. Manage, reschedule, cancel, and reopen saved pages from the dashboard.
 - Links reuse matching open tabs across browser windows. Due routines can automatically open or focus their page once when that option is enabled in Settings; it is off by default.

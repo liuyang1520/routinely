@@ -6,3 +6,5 @@ dist
 test-results
 pnpm-lock.yaml
 public/icon
+
+.local/

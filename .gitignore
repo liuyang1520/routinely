@@ -6,3 +6,6 @@ dist/
 .DS_Store
 web-ext.config.ts
 test-results/
+
+# Local publication drafts and store submission assets
+.local/
