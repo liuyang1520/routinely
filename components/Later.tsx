@@ -56,9 +56,7 @@ export function Later({
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">A PLACE FOR NOT RIGHT NOW</p>
-          <h1>Come back when it’s time.</h1>
-          <p>Save a page for later. We’ll bring it back into view, right on cue.</p>
+          <h1>View later</h1>
         </div>
         <Button onClick={() => void addCurrent()}>
           <Plus />

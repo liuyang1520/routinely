@@ -83,9 +83,7 @@ async function seed(state: State) {
 test('create, edit, complete, export, and restore a routine in the real extension', async () => {
   await seed(emptyState());
   const page = await dashboard();
-  await expect(
-    page.getByRole('heading', { name: 'Good habits. A little at a time.' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await expect(page.locator('.today-aside')).toHaveCount(0);
   await expect(page.locator('.page-footer')).toHaveCount(0);
   await page.getByRole('button', { name: 'A note to keep handy' }).click();
@@ -365,7 +363,7 @@ test('preview and in-page reminders follow light, dark, and system modes', async
   await dashboardPage.getByRole('button', { name: 'Preview panel' }).click();
   const preview = dashboardPage.getByRole('region', { name: 'Reminder preview' });
   await expect(preview).toHaveAttribute('data-theme', 'light');
-  await expect(preview.locator('textarea')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(preview.locator('textarea')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await dashboardPage.getByRole('button', { name: 'Close preview' }).click();
 
   const now = Date.now();
@@ -421,6 +419,179 @@ test('preview and in-page reminders follow light, dark, and system modes', async
   expect(errors).toEqual([]);
 });
 
+test('rounded reminders and configurable notes survive page styles and settings reloads', async () => {
+  const now = Date.now();
+  const state = emptyState(now);
+  state.routines = [
+    {
+      id: 'notes-setting',
+      title: 'Read a chapter',
+      label: 'Reading',
+      url: '',
+      notes: '',
+      enabled: true,
+      createdAt: now,
+      startAt: now,
+      schedule: { frequency: 'daily', time: '23:59', days: [1], monthDay: 1, interval: 1 },
+    },
+  ];
+  state.occurrences = [
+    {
+      id: 'notes-setting',
+      routineId: 'notes-setting',
+      title: 'Read a chapter',
+      label: 'Reading',
+      url: '',
+      scheduledAt: now,
+      status: 'pending',
+      notes: 'Keep this note',
+    },
+  ];
+  await seed(state);
+  const settings = await dashboard();
+  await settings.getByRole('button', { name: 'Settings', exact: true }).click();
+  const toggle = settings.getByRole('switch', { name: 'Notes in floating reminders' });
+  await expect(toggle).toBeChecked();
+  const page = await context.newPage();
+  await page.goto(url);
+  await page.bringToFront();
+  const panel = page.getByRole('region', { name: 'Routinely reminder' });
+  const note = panel.getByRole('textbox', { name: 'Notes for Read a chapter' });
+  await expect(note).toHaveValue('Keep this note');
+  await expect(panel.locator('.occurrence-note > svg')).toHaveCount(0);
+  await expect(panel.locator('.reminder-intro')).toHaveCount(0);
+  await expect(panel.getByText('Notes for this check-in')).toHaveCount(0);
+  await note.fill('');
+  await expect(panel.locator('.occurrence-note > svg')).toHaveCount(1);
+  await expect(note).toHaveAttribute('placeholder', 'Add a note…');
+  await note.press('a');
+  await expect(note).toHaveValue('a');
+  await expect(panel.locator('.occurrence-note > svg')).toHaveCount(0);
+  await note.fill('A saved note');
+  await panel.locator('header').click();
+  await expect.poll(async () => (await read()).occurrences[0]?.notes).toBe('A saved note');
+
+  const resize = panel.getByRole('button', { name: 'Expand notes for Read a chapter' });
+  await resize.hover();
+  await expect(resize).toHaveCSS('cursor', 'ns-resize');
+  const primaryColor = await panel
+    .getByRole('button', { name: 'Mark done', exact: true })
+    .evaluate((button) => getComputedStyle(button).backgroundColor);
+  await expect(resize).toHaveCSS('color', primaryColor);
+  const originalHeight = (await note.boundingBox())!.height;
+  const handle = (await resize.boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2 + 80, {
+    steps: 8,
+  });
+  await page.mouse.up();
+  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 80);
+  const expandedHandle = (await resize.boundingBox())!;
+  await page.mouse.move(expandedHandle.x + expandedHandle.width / 2, expandedHandle.y + 9);
+  await page.mouse.down();
+  await page.mouse.move(expandedHandle.x + expandedHandle.width / 2, expandedHandle.y - 40, {
+    steps: 5,
+  });
+  await page.mouse.up();
+  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 80);
+  await resize.focus();
+  await resize.press('Enter');
+  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 104);
+  expect((await read()).occurrences[0]?.notes).toBe('A saved note');
+
+  async function expectSingleActionRow() {
+    const boxes = await panel.locator('.occurrence-actions .button').evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const { x, y, right } = button.getBoundingClientRect();
+        return { x, y, right };
+      }),
+    );
+    const actions = (await panel.locator('.occurrence-actions').boundingBox())!;
+    expect(boxes.length).toBeGreaterThanOrEqual(3);
+    for (const box of boxes) expect(box.y).toBeCloseTo(boxes[0]!.y, 0);
+    expect(boxes[0]!.x).toBeCloseTo(actions.x, 0);
+    expect(boxes.at(-1)!.right).toBeCloseTo(actions.x + actions.width, 0);
+  }
+  await expectSingleActionRow();
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expect(panel.locator('.occurrence-actions .button').first()).toHaveCSS('font-size', '11px');
+  await expectSingleActionRow();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
+  for (const fontSize of ['0px', '10px', '16px', '24px']) {
+    await page.evaluate((size) => {
+      document.documentElement.style.fontSize = size;
+      document.documentElement.style.setProperty('--radius-card', '0px');
+      document.documentElement.style.setProperty('--radius-sm', '0px');
+    }, fontSize);
+    await expect(panel).toHaveCSS('border-top-left-radius', '24px');
+    await expect(panel.locator('.occurrence-card')).toHaveCSS('border-top-left-radius', '16px');
+    await expect(note).toHaveCSS('border-top-width', '0px');
+    await expect(note).toHaveCSS('box-shadow', 'none');
+    await expect(panel.getByRole('button', { name: 'Mark done', exact: true })).toHaveCSS(
+      'border-top-left-radius',
+      '12px',
+    );
+  }
+
+  await settings.bringToFront();
+  await toggle.click();
+  await expect(toggle).not.toBeChecked();
+  await settings.reload();
+  await settings.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(toggle).not.toBeChecked();
+  await settings.getByRole('button', { name: 'Preview panel' }).click();
+  const preview = settings.getByRole('region', { name: 'Reminder preview' });
+  await expect(preview).toHaveCSS('border-top-left-radius', '24px');
+  await expect(preview.locator('textarea')).toHaveCount(0);
+  await expect(preview.getByRole('button', { name: 'Mark done', exact: true })).toBeVisible();
+  await settings.getByRole('button', { name: 'Close preview' }).click();
+  await page.bringToFront();
+  await expect(panel).toBeVisible();
+  await expect(note).toHaveCount(0);
+  expect((await read()).occurrences[0]?.notes).toBe('A saved note');
+
+  await settings.bringToFront();
+  await settings.getByRole('button', { name: 'Today', exact: true }).click();
+  await settings
+    .locator('.occurrence-card:has(.status-due)')
+    .getByRole('button', { name: 'Show details for Read a chapter' })
+    .click();
+  await expect(settings.getByLabel('Notes for Read a chapter')).toHaveValue('A saved note');
+  await settings.getByRole('button', { name: 'Settings', exact: true }).click();
+  await toggle.click();
+  await settings.getByRole('button', { name: 'Preview panel' }).click();
+  await expect(preview.locator('textarea')).toHaveCount(1);
+  await expect(preview.locator('textarea')).toHaveAttribute(
+    'placeholder',
+    'Find one idea worth coming back to.',
+  );
+  await expect(preview.locator('textarea')).toBeEmpty();
+  await expect(preview.locator('.occurrence-note > svg')).toHaveCount(1);
+  await preview.locator('textarea').press('h');
+  await expect(preview.locator('textarea')).toHaveValue('h');
+  await expect(preview.locator('.occurrence-note > svg')).toHaveCount(0);
+  await preview.locator('textarea').fill('');
+  await expect(preview.locator('.occurrence-note > svg')).toHaveCount(1);
+  await settings.getByRole('button', { name: 'Close preview' }).click();
+  for (const position of ['top-right', 'bottom-right', 'top-left', 'bottom-left']) {
+    await settings.getByRole('combobox', { name: 'A place for your panel' }).selectOption(position);
+    await page.bringToFront();
+    await expect(panel).toHaveClass(`reminder-panel position-${position}`);
+    await expect(panel).toHaveCSS('border-top-left-radius', '24px');
+    await expect(note).toHaveValue('A saved note');
+    await settings.bringToFront();
+  }
+  await page.bringToFront();
+  await panel.getByRole('button', { name: 'Mark done', exact: true }).click();
+  await expect(panel).toHaveCount(0);
+  await expect.poll(async () => (await read()).occurrences[0]?.status).toBe('completed');
+  await page.close();
+  await settings.close();
+  expect(errors).toEqual([]);
+});
+
 test('alarms open the target page and keep its reminder there; snooze, notes, and completion persist', async () => {
   await seed(emptyState());
   const second = await context.newPage();
@@ -452,7 +623,9 @@ test('alarms open the target page and keep its reminder there; snooze, notes, an
   const first = context.pages().find((page) => page.url() === `${url}/article`)!;
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toBeVisible();
   await expect(first.getByRole('heading', { name: 'Alarm test routine' })).toBeVisible();
-  await first.getByLabel('Notes for Alarm test routine').fill('A note from the floating panel.');
+  await first
+    .getByRole('textbox', { name: 'Notes for Alarm test routine', exact: true })
+    .fill('A note from the floating panel.');
   await first.getByRole('button', { name: '10 min', exact: true }).click();
   await expect(first.getByRole('region', { name: 'Routinely reminder' })).toHaveCount(0);
   let state = await read();
@@ -950,9 +1123,7 @@ test('a due routine switches to its existing tab and window only once', async ()
   );
   await page.bringToFront();
   await expect(reminder).toHaveCount(0);
-  await expect(
-    page.getByRole('heading', { name: 'Good habits. A little at a time.' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   expect(
     await worker.evaluate(
       async () =>
@@ -1107,9 +1278,7 @@ test('reloading the extension retires reminders in already-open webpages without
       }
     })
     .toBe(true);
-  await expect(
-    control.getByRole('heading', { name: 'Good habits. A little at a time.' }),
-  ).toBeVisible();
+  await expect(control.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await page.reload();
   await page.bringToFront();
   await expect(page.getByRole('heading', { name: 'Reload check' })).toBeVisible();

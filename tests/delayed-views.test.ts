@@ -62,6 +62,9 @@ describe('one-off delayed views', () => {
     expect(migrated.scratchpad).toBe('Keep this');
     expect(migrated.delayedViews).toEqual([]);
     expect(migrated.settings.focusExistingTabs).toBe(false);
+    expect(migrated.settings.reminderNotes).toBe(true);
+    const disabled = { ...migrated, settings: { ...migrated.settings, reminderNotes: false } };
+    expect(parseBackup(JSON.stringify(disabled)).settings.reminderNotes).toBe(false);
   });
 });
 describe('tab URL matching', () => {

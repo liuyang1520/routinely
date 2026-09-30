@@ -37,7 +37,7 @@
   max-width: calc(100vw - 40px);
   max-height: calc(100vh - 40px);
   overflow-y: auto;
-  border-radius: var(--radius-card);
+  border-radius: 24px;
 }
 
 .page-notifications > .reminder-panel {
@@ -144,6 +144,9 @@
 
 /* Reminder Panel */
 .reminder-panel {
+  /* Local pixel tokens keep live panels and previews independent of page/theme tokens. */
+  --panel-radius: 24px;
+  --panel-radius-sm: 12px;
   --foreground: #f4f4f5;
   --muted-foreground: #71717a;
   --muted-foreground-bright: #a1a1aa;
@@ -171,8 +174,9 @@
   position: fixed;
   z-index: 2147483647;
   border: 1px solid var(--border);
-  border-radius: var(--radius-card); /* 24px */
+  border-radius: var(--panel-radius); /* 24px */
   box-shadow: var(--panel-shadow);
+  container: reminder / inline-size;
   text-align: left;
   box-sizing: border-box;
   animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1);
@@ -269,35 +273,6 @@
   gap: 8px;
 }
 
-.reminder-intro {
-  padding: 20px 22px 16px;
-}
-
-.reminder-intro > span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--primary);
-}
-
-.reminder-intro h2 {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.05em;
-  margin-top: 8px;
-  color: var(--foreground);
-}
-
-.reminder-intro p {
-  font-size: 13px;
-  color: var(--muted-foreground);
-  margin-top: 4px;
-}
-
 .preview-tag {
   background: var(--emerald-muted);
   color: var(--primary);
@@ -316,7 +291,7 @@
   justify-content: center;
   gap: 6px;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--panel-radius-sm);
   background: transparent;
   color: var(--muted-foreground-bright);
   padding: 8px 12px;
@@ -358,9 +333,9 @@
 }
 
 .reminder-panel .occurrence-card {
-  margin: 0 14px 14px;
+  margin: 14px;
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: 16px;
   background: var(--panel-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -431,51 +406,128 @@
 .reminder-panel .occurrence-details {
   margin: 0;
   padding: 0 14px 14px;
+  border-top: 1px solid var(--border);
 }
 
-.reminder-panel .occurrence-note > span {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  font-size: 11px;
+.reminder-panel .occurrence-note {
+  display: block;
+  position: relative;
+}
+
+.reminder-panel .occurrence-note > svg {
+  position: absolute;
+  top: 15px;
+  left: 0;
   color: var(--muted-foreground);
-  margin-bottom: 6px;
+  pointer-events: none;
 }
 
 .reminder-panel .occurrence-note textarea {
-  resize: vertical;
+  resize: none;
   display: block;
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--panel-input);
-  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 0 12px 23px;
+  min-height: 96px;
   color: var(--foreground);
   font-size: 13px;
   line-height: 1.5;
   outline: none;
-  transition: border-color 300ms;
+  box-shadow: none;
 }
 
 .reminder-panel .occurrence-note textarea:focus {
+  box-shadow: none;
+}
+
+.reminder-panel .occurrence-note.has-note textarea {
+  padding-left: 0;
+}
+
+.reminder-panel .occurrence-note textarea::placeholder {
+  color: var(--muted-foreground);
+  opacity: 1;
+}
+
+.reminder-panel .notes-resize-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.reminder-panel .notes-resize-handle span {
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--panel-background);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 3px;
+  transform: translateY(-9px);
+}
+
+.reminder-panel .notes-resize-handle:hover,
+.reminder-panel .notes-resize-handle:focus-visible,
+.reminder-panel .notes-resize-handle.is-resizing,
+.reminder-panel .occurrence-note:focus-within + .notes-resize-handle {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--emerald-muted);
+  color: var(--primary);
+  background: var(--emerald-muted);
 }
 
 .reminder-panel .occurrence-actions {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px;
-  margin-top: 12px;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.reminder-panel .occurrence-actions .button {
+  padding: 8px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.reminder-panel .occurrence-mark-done {
+  margin-left: auto;
+}
+
+@container reminder (max-width: 360px) {
+  .reminder-panel .occurrence-actions {
+    gap: 2px;
+  }
+
+  .reminder-panel .occurrence-actions .button {
+    padding: 8px 3px;
+    font-size: 11px;
+  }
+
+  .reminder-panel .occurrence-actions .button svg {
+    display: none;
+  }
 }
 
 .reminder-panel > footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 20px 16px;
+  justify-content: flex-end;
+  padding: 0 20px 16px;
   gap: 8px;
   font-size: 11px;
   color: var(--muted-foreground);
@@ -500,6 +552,7 @@
 
 .panel-pagination {
   display: flex;
+  margin-right: auto;
   gap: 6px;
 }
 
@@ -521,7 +574,9 @@
 
 .panel-done {
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 10px;
   padding: 24px;
   color: var(--primary);
 }

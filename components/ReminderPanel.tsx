@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUpRight, Bell, CheckCheck, X } from 'lucide-react';
+import { ArrowUpRight, CheckCheck, X } from 'lucide-react';
 import { Brand } from './Brand';
 import { Button } from './ui/button';
 import { OccurrenceCard } from './OccurrenceCard';
@@ -51,23 +51,19 @@ export function ReminderPanel({
           </Button>
         </div>
       </header>
-      <div className="reminder-intro">
-        <span>
-          <Bell size={13} />
-          {preview ? 'A LITTLE PREVIEW' : 'A LITTLE NUDGE'}
-        </span>
-        <h2>{item ? 'A moment for your routine.' : 'A little thing, well done.'}</h2>
-        <p>
-          {item
-            ? 'No rush. Just a little space for what matters.'
-            : 'You’re all caught up. See you next time.'}
-        </p>
-      </div>
       {item ? (
-        <OccurrenceCard key={item.id} item={item} act={perform} compact />
+        <OccurrenceCard
+          key={item.id}
+          item={item}
+          act={perform}
+          compact
+          showNotes={state.settings.reminderNotes}
+          notePlaceholder={preview ? 'Find one idea worth coming back to.' : undefined}
+        />
       ) : (
         <div className="panel-done">
-          <CheckCheck size={32} />
+          <CheckCheck size={24} aria-hidden="true" />
+          <p>All caught up.</p>
         </div>
       )}
       {error && (
@@ -88,9 +84,7 @@ export function ReminderPanel({
               />
             ))}
           </div>
-        ) : (
-          <span>{preview ? 'Try notes or snooze.' : 'One small thing at a time.'}</span>
-        )}
+        ) : null}
         <button
           onClick={() => {
             if (preview) onClose();
@@ -109,10 +103,12 @@ export function ReminderPanel({
 }
 export function ReminderPreview({
   position,
+  reminderNotes,
   onClose,
   theme,
 }: {
   position: State['settings']['position'];
+  reminderNotes: boolean;
   onClose: () => void;
   theme: Theme;
 }) {
@@ -120,7 +116,7 @@ export function ReminderPreview({
     const now = Date.now();
     return {
       ...emptyState(now),
-      settings: { reminders: true, position, focusExistingTabs: true },
+      settings: { ...emptyState(now).settings, position, reminderNotes },
       routines: [
         {
           id: 'preview',
@@ -143,7 +139,7 @@ export function ReminderPreview({
           url: 'https://news.ycombinator.com',
           scheduledAt: now,
           status: 'pending',
-          notes: 'Find one idea worth coming back to.',
+          notes: '',
         },
       ],
     };

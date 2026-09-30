@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Check,
   ChevronDown,
@@ -27,16 +27,25 @@ export function OccurrenceCard({
   compact = false,
   readOnly = false,
   minimal = false,
+  showNotes = true,
+  notePlaceholder = 'Add a note…',
 }: {
   item: Occurrence;
   act: (action: Action) => Promise<boolean>;
   compact?: boolean;
   readOnly?: boolean;
   minimal?: boolean;
+  showNotes?: boolean;
+  notePlaceholder?: string;
 }) {
   const [expanded, setExpanded] = useState(compact);
   const [note, setNote] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [noteHeight, setNoteHeight] = useState(96);
+  const [resizing, setResizing] = useState(false);
+  const resizeStart = useRef<{ y: number; height: number } | null>(null);
+  const dragged = useRef(false);
+  const noteValue = note ?? item.notes;
   const completed = item.status === 'completed';
   const due = item.status === 'pending' && item.scheduledAt <= Date.now();
   const snoozed = !!item.snoozedUntil && item.snoozedUntil > Date.now();
@@ -115,28 +124,74 @@ export function OccurrenceCard({
       </div>
       {!minimal && expanded && (
         <div className="occurrence-details">
-          <label className="occurrence-note">
-            <span>
-              <StickyNote size={13} /> Notes for this check-in
-            </span>
-            <textarea
-              aria-label={`Notes for ${item.title}`}
-              maxLength={10000}
-              rows={2}
-              readOnly={readOnly}
-              placeholder="A thought to come back to…"
-              value={note ?? item.notes}
-              onChange={(e) => setNote(e.target.value)}
-              onBlur={() => {
-                if (note !== undefined && note !== item.notes) {
-                  const value = note;
-                  void act({ type: 'note', id: item.id, value }).then((ok) => {
-                    if (ok) setNote((current) => (current === value ? undefined : current));
-                  });
-                }
-              }}
-            />
-          </label>
+          {showNotes && (
+            <div className="occurrence-notes-section">
+              <label className={`occurrence-note ${noteValue ? 'has-note' : ''}`}>
+                {!noteValue && <StickyNote size={15} aria-hidden="true" />}
+                <textarea
+                  aria-label={`Notes for ${item.title}`}
+                  maxLength={10000}
+                  rows={2}
+                  readOnly={readOnly}
+                  placeholder={notePlaceholder}
+                  value={noteValue}
+                  style={compact ? { height: noteHeight } : undefined}
+                  onChange={(e) => setNote(e.target.value)}
+                  onBlur={() => {
+                    if (note !== undefined && note !== item.notes) {
+                      const value = note;
+                      void act({ type: 'note', id: item.id, value }).then((ok) => {
+                        if (ok) setNote((current) => (current === value ? undefined : current));
+                      });
+                    }
+                  }}
+                />
+              </label>
+              {compact && !readOnly && (
+                <button
+                  type="button"
+                  className={`notes-resize-handle ${resizing ? 'is-resizing' : ''}`}
+                  aria-label={`Expand notes for ${item.title}`}
+                  title="Drag down to expand notes, or click to add space"
+                  onPointerDown={(e) => {
+                    if (e.button !== 0) return;
+                    resizeStart.current = { y: e.clientY, height: noteHeight };
+                    dragged.current = false;
+                    setResizing(true);
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                  }}
+                  onPointerMove={(e) => {
+                    const start = resizeStart.current;
+                    if (!start) return;
+                    const distance = e.clientY - start.y;
+                    if (Math.abs(distance) > 3) dragged.current = true;
+                    setNoteHeight((height) =>
+                      Math.max(height, Math.min(640, start.height + distance)),
+                    );
+                  }}
+                  onPointerUp={(e) => {
+                    resizeStart.current = null;
+                    setResizing(false);
+                    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                      e.currentTarget.releasePointerCapture(e.pointerId);
+                    }
+                  }}
+                  onLostPointerCapture={() => {
+                    resizeStart.current = null;
+                    setResizing(false);
+                  }}
+                  onClick={(e) => {
+                    if (e.detail === 0 || !dragged.current) {
+                      setNoteHeight((height) => Math.min(640, height + 24));
+                    }
+                    dragged.current = false;
+                  }}
+                >
+                  <span aria-hidden="true">···</span>
+                </button>
+              )}
+            </div>
+          )}
           {!readOnly && (
             <div className="occurrence-actions">
               {item.status === 'pending' ? (
@@ -175,6 +230,7 @@ export function OccurrenceCard({
                   </Button>
                   <Button
                     size="sm"
+                    className="occurrence-mark-done"
                     disabled={busy}
                     onClick={() => void perform({ type: 'complete', id: item.id })}
                   >

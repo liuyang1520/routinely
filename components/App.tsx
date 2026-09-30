@@ -155,7 +155,6 @@ export function App() {
         >
           <Brand />
         </a>
-        <div className="workspace-label">YOUR LITTLE CORNER</div>
         <nav aria-label="Main navigation">
           {(
             [
@@ -308,32 +307,17 @@ export function App() {
             <>
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">
-                    {page === 'today'
-                      ? date
-                          .toLocaleDateString([], {
-                            weekday: 'long',
-                            month: 'long',
-                            day: 'numeric',
-                          })
-                          .toUpperCase()
-                      : 'INTENTIONS, WITH A LITTLE STRUCTURE'}
-                  </p>
                   <h1>
                     {page === 'today'
                       ? isToday
-                        ? 'Good habits. A little at a time.'
-                        : `A little space for ${date.toLocaleDateString([], { weekday: 'long' })}.`
-                      : 'Your rhythm, your routines.'}
-                    <span className="heading-dot"> </span>
+                        ? 'Today'
+                        : date.toLocaleDateString([], {
+                            weekday: 'long',
+                            month: 'short',
+                            day: 'numeric',
+                          })
+                      : 'My routines'}
                   </h1>
-                  <p>
-                    {page === 'today'
-                      ? isToday
-                        ? 'A calmer place for the things you want to keep coming back to.'
-                        : 'The small things you made room for on this day.'
-                      : 'Small things worth making time for. All in one place.'}
-                  </p>
                 </div>
                 <Button onClick={() => setForm({})}>
                   <Plus />
@@ -669,6 +653,7 @@ export function App() {
       {preview && (
         <ReminderPreview
           position={state.settings.position}
+          reminderNotes={state.settings.reminderNotes}
           onClose={() => setPreview(false)}
           theme={theme}
         />

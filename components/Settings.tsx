@@ -84,9 +84,7 @@ export function Settings({
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">JUST THE WAY YOU LIKE IT</p>
-          <h1>Make yourself at home.</h1>
-          <p>A few thoughtful defaults. The rest is up to you.</p>
+          <h1>Settings</h1>
         </div>
       </div>
       <div className="settings-layout">
@@ -114,7 +112,7 @@ export function Settings({
         </section>
         <section className="surface settings-card">
           <h2>
-            <Bell size={18} /> Gentle reminders
+            <Bell size={18} /> Reminders
           </h2>
           <div className="setting-row">
             <div>
@@ -126,6 +124,21 @@ export function Settings({
               checked={state.settings.reminders}
               onCheckedChange={(reminders) =>
                 void act({ type: 'settings', value: { ...state.settings, reminders } })
+              }
+            />
+          </div>
+          <div className="setting-row">
+            <div>
+              <label htmlFor="reminder-notes">Notes in floating reminders</label>
+              <p>
+                Show a notes field in the panel. Saved notes stay available in Today and Activity.
+              </p>
+            </div>
+            <Switch
+              id="reminder-notes"
+              checked={state.settings.reminderNotes}
+              onCheckedChange={(reminderNotes) =>
+                void act({ type: 'settings', value: { ...state.settings, reminderNotes } })
               }
             />
           </div>

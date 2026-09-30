@@ -60,6 +60,7 @@ export const occurrenceSchema = z.preprocess(
 );
 export const settingsSchema = z.object({
   reminders: z.boolean(),
+  reminderNotes: z.boolean().default(true),
   focusExistingTabs: z.boolean().default(false),
   position: z.enum(['top-right', 'bottom-right', 'top-left', 'bottom-left']),
 });
@@ -101,7 +102,12 @@ export const emptyState = (now = Date.now()): State => ({
   routines: [],
   occurrences: [],
   delayedViews: [],
-  settings: { reminders: true, position: 'top-right', focusExistingTabs: false },
+  settings: {
+    reminders: true,
+    reminderNotes: true,
+    position: 'top-right',
+    focusExistingTabs: false,
+  },
   scratchpad: '',
   lastTick: now,
 });

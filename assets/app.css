@@ -931,13 +931,17 @@ kbd {
   padding: 16px 0;
 }
 
-.occurrence-note > span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--routinely-text-caption);
+.occurrence-note {
+  display: block;
+  position: relative;
+}
+
+.occurrence-note > svg {
+  position: absolute;
+  top: 13px;
+  left: 12px;
   color: var(--muted-foreground);
-  margin-bottom: 8px;
+  pointer-events: none;
 }
 
 .occurrence-note textarea {
@@ -945,9 +949,13 @@ kbd {
   border: 1px solid var(--border);
   color: var(--foreground);
   font-size: var(--routinely-text-small);
-  padding: 10px 12px;
+  padding: 10px 12px 10px 36px;
   border-radius: var(--radius-sm);
   min-height: 64px;
+}
+
+.occurrence-note.has-note textarea {
+  padding-left: 12px;
 }
 
 .occurrence-actions {

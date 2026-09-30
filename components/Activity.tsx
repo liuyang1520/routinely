@@ -62,9 +62,7 @@ export function Activity({
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">THE BIGGER PICTURE</p>
-          <h1>Little steps add up.</h1>
-          <p>Some perspective on the routines you’re making room for.</p>
+          <h1>Activity</h1>
         </div>
         <Button
           variant="outline"
