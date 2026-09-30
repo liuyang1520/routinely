@@ -949,13 +949,24 @@ kbd {
   border: 1px solid var(--border);
   color: var(--foreground);
   font-size: var(--routinely-text-small);
-  padding: 10px 12px 10px 36px;
+  padding: 10px 12px;
   border-radius: var(--radius-sm);
   min-height: 64px;
 }
 
-.occurrence-note.has-note textarea {
-  padding-left: 12px;
+.occurrence-note-placeholder {
+  position: absolute;
+  top: 10px;
+  left: 36px;
+  right: 12px;
+  color: var(--muted-foreground);
+  font-size: var(--routinely-text-small);
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+.occurrence-note textarea::placeholder {
+  color: transparent;
 }
 
 .occurrence-actions {

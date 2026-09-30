@@ -126,8 +126,15 @@ export function OccurrenceCard({
         <div className="occurrence-details">
           {showNotes && (
             <div className="occurrence-notes-section">
-              <label className={`occurrence-note ${noteValue ? 'has-note' : ''}`}>
-                {!noteValue && <StickyNote size={15} aria-hidden="true" />}
+              <label className="occurrence-note">
+                {!noteValue && (
+                  <>
+                    <StickyNote size={15} aria-hidden="true" />
+                    <span className="occurrence-note-placeholder" aria-hidden="true">
+                      {notePlaceholder}
+                    </span>
+                  </>
+                )}
                 <textarea
                   aria-label={`Notes for ${item.title}`}
                   maxLength={10000}
@@ -151,8 +158,8 @@ export function OccurrenceCard({
                 <button
                   type="button"
                   className={`notes-resize-handle ${resizing ? 'is-resizing' : ''}`}
-                  aria-label={`Expand notes for ${item.title}`}
-                  title="Drag down to expand notes, or click to add space"
+                  aria-label={`Resize notes for ${item.title}`}
+                  title="Drag up or down to resize notes, or click to add space"
                   onPointerDown={(e) => {
                     if (e.button !== 0) return;
                     resizeStart.current = { y: e.clientY, height: noteHeight };
@@ -165,9 +172,7 @@ export function OccurrenceCard({
                     if (!start) return;
                     const distance = e.clientY - start.y;
                     if (Math.abs(distance) > 3) dragged.current = true;
-                    setNoteHeight((height) =>
-                      Math.max(height, Math.min(640, start.height + distance)),
-                    );
+                    setNoteHeight(Math.max(96, Math.min(640, start.height + distance)));
                   }}
                   onPointerUp={(e) => {
                     resizeStart.current = null;
@@ -179,6 +184,13 @@ export function OccurrenceCard({
                   onLostPointerCapture={() => {
                     resizeStart.current = null;
                     setResizing(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      const distance = e.key === 'ArrowDown' ? 24 : -24;
+                      setNoteHeight((height) => Math.max(96, Math.min(640, height + distance)));
+                    }
                   }}
                   onClick={(e) => {
                     if (e.detail === 0 || !dragged.current) {

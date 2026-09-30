@@ -464,6 +464,14 @@ test('rounded reminders and configurable notes survive page styles and settings 
   await note.fill('');
   await expect(panel.locator('.occurrence-note > svg')).toHaveCount(1);
   await expect(note).toHaveAttribute('placeholder', 'Add a note…');
+  await note.focus();
+  await expect(note).toHaveCSS('padding-left', '0px');
+  expect(await note.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(0);
+  await panel.screenshot({
+    path: 'test-results/empty-note-cursor.png',
+    animations: 'disabled',
+    caret: 'initial',
+  });
   await note.press('a');
   await expect(note).toHaveValue('a');
   await expect(panel.locator('.occurrence-note > svg')).toHaveCount(0);
@@ -471,7 +479,7 @@ test('rounded reminders and configurable notes survive page styles and settings 
   await panel.locator('header').click();
   await expect.poll(async () => (await read()).occurrences[0]?.notes).toBe('A saved note');
 
-  const resize = panel.getByRole('button', { name: 'Expand notes for Read a chapter' });
+  const resize = panel.getByRole('button', { name: 'Resize notes for Read a chapter' });
   await resize.hover();
   await expect(resize).toHaveCSS('cursor', 'ns-resize');
   const primaryColor = await panel
@@ -479,25 +487,28 @@ test('rounded reminders and configurable notes survive page styles and settings 
     .evaluate((button) => getComputedStyle(button).backgroundColor);
   await expect(resize).toHaveCSS('color', primaryColor);
   const originalHeight = (await note.boundingBox())!.height;
-  const handle = (await resize.boundingBox())!;
-  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2 + 80, {
-    steps: 8,
-  });
-  await page.mouse.up();
+  async function dragNotesBy(distance: number) {
+    const handle = (await resize.boundingBox())!;
+    const x = handle.x + handle.width / 2;
+    const y = handle.y + handle.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + distance, { steps: 8 });
+    await page.mouse.up();
+  }
+  await dragNotesBy(80);
   await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 80);
-  const expandedHandle = (await resize.boundingBox())!;
-  await page.mouse.move(expandedHandle.x + expandedHandle.width / 2, expandedHandle.y + 9);
-  await page.mouse.down();
-  await page.mouse.move(expandedHandle.x + expandedHandle.width / 2, expandedHandle.y - 40, {
-    steps: 5,
-  });
-  await page.mouse.up();
-  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 80);
+  await dragNotesBy(-40);
+  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 40);
   await resize.focus();
   await resize.press('Enter');
-  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 104);
+  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 64);
+  await resize.press('ArrowUp');
+  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 40);
+  await resize.press('ArrowDown');
+  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight + 64);
+  await dragNotesBy(-100);
+  await expect.poll(async () => (await note.boundingBox())!.height).toBe(originalHeight);
   expect((await read()).occurrences[0]?.notes).toBe('A saved note');
 
   async function expectSingleActionRow() {

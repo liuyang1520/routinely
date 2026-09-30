@@ -151,7 +151,7 @@ try {
   await expect(panel.getByRole('textbox')).toBeEmpty();
   await expect(panel.getByRole('textbox')).toHaveCSS('border-top-width', '0px');
   await expect(
-    panel.getByRole('button', { name: 'Expand notes for Read a chapter' }),
+    panel.getByRole('button', { name: 'Resize notes for Read a chapter' }),
   ).toBeVisible();
   await capture(reading, '03-floating-reminder.png');
   await dashboard.bringToFront();

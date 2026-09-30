@@ -429,7 +429,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  padding: 12px 0 12px 23px;
+  padding: 12px 0;
   min-height: 96px;
   color: var(--foreground);
   font-size: 13px;
@@ -442,12 +442,19 @@
   box-shadow: none;
 }
 
-.reminder-panel .occurrence-note.has-note textarea {
-  padding-left: 0;
+.reminder-panel .occurrence-note-placeholder {
+  position: absolute;
+  top: 12px;
+  left: 23px;
+  right: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: none;
 }
 
 .reminder-panel .occurrence-note textarea::placeholder {
-  color: var(--muted-foreground);
+  color: transparent;
   opacity: 1;
 }
 
