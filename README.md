@@ -6,7 +6,13 @@
 
 A quiet browser extension for the things you want to keep coming back to. Built with **WXT, React, TypeScript, Tailwind CSS, and shadcn-style Radix primitives**, managed with **pnpm**.
 
-[Website](https://liuyang1520.github.io/routinely/) · [Privacy policy](https://liuyang1520.github.io/routinely/privacy.html)
+[Chrome Web Store](https://chromewebstore.google.com/detail/routinely-%E2%80%94-small-habits/mckamgeggebmaaihbbpjlpfpmmpgafpa) · [Website](https://liuyang1520.github.io/routinely/) · [Privacy policy](https://liuyang1520.github.io/routinely/privacy.html)
+
+## Installation
+
+Install Routinely from the [Chrome Web Store](https://chromewebstore.google.com/detail/routinely-%E2%80%94-small-habits/mckamgeggebmaaihbbpjlpfpmmpgafpa).
+
+To load or build the extension from source, see [Load a production build](#load-a-production-build).
 
 ## Screenshots
 
@@ -48,7 +54,7 @@ pnpm build
 3. Click **Load unpacked** and select this project's `.output/chrome-mv3` directory.
 4. Pin Routinely's toolbar icon. Refresh existing webpages once to enable their reminder panels.
 
-`pnpm zip` produces a distributable archive in `.output`. `pnpm build:firefox` creates the Firefox build; load its manifest temporarily through `about:debugging` for development. Store publication and signing are separate steps.
+`pnpm zip` produces a distributable archive in `.output`. `pnpm build:firefox` creates the Firefox build; load its manifest temporarily through `about:debugging` for development. Routinely is published on the [Chrome Web Store](https://chromewebstore.google.com/detail/routinely-%E2%80%94-small-habits/mckamgeggebmaaihbbpjlpfpmmpgafpa). Firefox signing and distribution are separate steps.
 
 ## Browser-only UI preview
 
